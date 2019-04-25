@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/volatiletech/authboss"
+
 )
 
 const (
@@ -49,6 +50,7 @@ type Confirm struct {
 
 // Init module
 func (c *Confirm) Init(ab *authboss.Authboss) (err error) {
+	fmt.Println("-----------------Init---------------------")
 	c.Authboss = ab
 
 	if err = c.Authboss.Config.Core.MailRenderer.Load(EmailConfirmHTML, EmailConfirmTxt); err != nil {
@@ -103,6 +105,11 @@ func (c *Confirm) PreventAuth(w http.ResponseWriter, r *http.Request, handled bo
 // StartConfirmationWeb hijacks a request and forces a user to be confirmed
 // first it's assumed that the current user is loaded into the request context.
 func (c *Confirm) StartConfirmationWeb(w http.ResponseWriter, r *http.Request, handled bool) (bool, error) {
+	//----- Begin : Nassim
+	fmt.Println("<<<<<<<<<<<<<<<<<<<<<-------------StartConfirmationWeb----------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+	//----- End : Nassim
+
+
 	user, err := c.Authboss.CurrentUser(r)
 	if err != nil {
 		return false, err
@@ -140,21 +147,23 @@ func (c *Confirm) StartConfirmation(ctx context.Context, user authboss.Confirmab
 		return errors.Wrap(err, "failed to save user during StartConfirmation, user data may be in weird state")
 	}
 
-	goConfirmEmail(c, ctx, user.GetEmail(), token)
+	logger.Infof(".............start confirmation %s", user.GetCustomerToken() )
+
+	goConfirmEmail(c, ctx, user.GetEmail(), token, user.GetCustomerToken())
 
 	return nil
 }
 
 // This is here so it can be mocked out by a test
-var goConfirmEmail = func(c *Confirm, ctx context.Context, to, token string) {
-	go c.SendConfirmEmail(ctx, to, token)
+var goConfirmEmail = func(c *Confirm, ctx context.Context, to, token string, customerToken string) {
+	go c.SendConfirmEmail(ctx, to, token, customerToken)
 }
 
 // SendConfirmEmail sends a confirmation e-mail to a user
-func (c *Confirm) SendConfirmEmail(ctx context.Context, to, token string) {
+func (c *Confirm) SendConfirmEmail(ctx context.Context, to, token string, customerToken string) {
 	logger := c.Authboss.Logger(ctx)
 
-	mailURL := c.mailURL(token)
+	mailURL := c.mailURL(token, customerToken)
 
 	email := authboss.Email{
 		To:       []string{to},
@@ -163,7 +172,8 @@ func (c *Confirm) SendConfirmEmail(ctx context.Context, to, token string) {
 		Subject:  c.Config.Mail.SubjectPrefix + "Confirm New Account",
 	}
 
-	logger.Infof("sending confirm e-mail to: %s", to)
+	logger.Infof("sssssending confirm e-mail to: %s", to)
+	logger.Infof("-----------------DataConfirmURL........%s ", DataConfirmURL)
 
 	ro := authboss.EmailResponseOptions{
 		Data:         authboss.NewHTMLData(DataConfirmURL, mailURL),
@@ -175,6 +185,8 @@ func (c *Confirm) SendConfirmEmail(ctx context.Context, to, token string) {
 	}
 }
 
+
+
 // Get is a request that confirms a user with a valid token
 func (c *Confirm) Get(w http.ResponseWriter, r *http.Request) error {
 	logger := c.RequestLogger(r)
@@ -184,12 +196,17 @@ func (c *Confirm) Get(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+
 	if errs := validator.Validate(); errs != nil {
 		logger.Infof("validation failed in Confirm.Get, this typically means a bad token: %+v", errs)
 		return c.invalidToken(w, r)
 	}
 
 	values := authboss.MustHaveConfirmValues(validator)
+
+	//======start =============================
+	logger.Infof("===============validator====token=%s===== cus_token:%s==",values.GetToken(), values.GetCustomerToken() )
+	//=======end =====================================
 
 	rawToken, err := base64.URLEncoding.DecodeString(values.GetToken())
 	if err != nil {
@@ -207,7 +224,11 @@ func (c *Confirm) Get(w http.ResponseWriter, r *http.Request) error {
 	selector := base64.StdEncoding.EncodeToString(selectorBytes[:])
 
 	storer := authboss.EnsureCanConfirm(c.Authboss.Config.Storage.Server)
-	user, err := storer.LoadByConfirmSelector(r.Context(), selector)
+	//====================start
+
+	//user, err := storer.LoadByConfirmSelector(r.Context(), selector)
+	user, err := storer.LoadByConfirmSelector(r.Context(), selector, values.GetCustomerToken())
+	//====================End
 	if err == authboss.ErrUserNotFound {
 		logger.Infof("confirm selector was not found in database: %s", selector)
 		return c.invalidToken(w, r)
@@ -244,14 +265,29 @@ func (c *Confirm) Get(w http.ResponseWriter, r *http.Request) error {
 	return c.Authboss.Config.Core.Redirector.Redirect(w, r, ro)
 }
 
-func (c *Confirm) mailURL(token string) string {
-	query := url.Values{FormValueConfirm: []string{token}}
+func (c *Confirm) mailURL(token string, customerToken string) string {
+	//query := url.Values{FormValueConfirm: []string{token}}
+	query := url.Values{FormValueConfirm: []string{token},
+						"customer_token": []string{customerToken}}
+	fmt.Println("--------------------mailURL...........%s", query)
+	fmt.Println("--------------------FormValueConfirm...........%s", FormValueConfirm)
+	//queryCusToken :=  url.Values{"customer_token": []string{customerToken}}
 
 	if len(c.Config.Mail.RootURL) != 0 {
 		return fmt.Sprintf("%s?%s", c.Config.Mail.RootURL+"/confirm", query.Encode())
 	}
 
 	p := path.Join(c.Config.Paths.Mount, "confirm")
+	fmt.Println(p)
+	fmt.Println(c.Config.Paths.RootURL)
+	fmt.Println(query.Encode())
+	//fmt.Println(customerToken)
+
+	//fmt.Sprintf("%s%s?%s&customer_token=", c.Config.Paths.RootURL, p, query.Encode(), customerToken)
+	fmt.Sprintf("%s%s?%s", c.Config.Paths.RootURL, p, query.Encode())
+	fmt.Println("-----------------------------------------------")
+
+	//return fmt.Sprintf("%s%s?%s&%s", c.Config.Paths.RootURL, p, query.Encode(), queryCusToken.Encode())
 	return fmt.Sprintf("%s%s?%s", c.Config.Paths.RootURL, p, query.Encode())
 }
 

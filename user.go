@@ -35,11 +35,13 @@ type ConfirmableUser interface {
 	User
 
 	GetEmail() (email string)
+	GetCustomerToken() (customer_token string)
 	GetConfirmed() (confirmed bool)
 	GetConfirmSelector() (selector string)
 	GetConfirmVerifier() (verifier string)
 
 	PutEmail(email string)
+	PutCustomerToken(customer_token string)
 	PutConfirmed(confirmed bool)
 	PutConfirmSelector(selector string)
 	PutConfirmVerifier(verifier string)

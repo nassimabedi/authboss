@@ -10,6 +10,8 @@ import (
 
 	"github.com/volatiletech/authboss"
 	"golang.org/x/crypto/bcrypt"
+
+	"fmt"
 )
 
 // Pages
@@ -53,6 +55,7 @@ func (r *Register) Get(w http.ResponseWriter, req *http.Request) error {
 
 // Post to the register page
 func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
+	fmt.Println("................................Post Register..............................<<<<<<<<<<<")
 	logger := r.RequestLogger(req)
 	validatable, err := r.Core.BodyReader.Read(PageRegister, req)
 	if err != nil {
@@ -87,6 +90,9 @@ func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
 	// Get values from request
 	userVals := authboss.MustHaveUserValues(validatable)
 	pid, password := userVals.GetPID(), userVals.GetPassword()
+	val := preserve["customer_token"]
+	//cus_token := userVals.GetValues()["customer_token"]
+	fmt.Println("..........pid:%s.........Password:%s---------------val:%s-----", pid, password,val)
 
 	// Put values into newly created user for storage
 	storer := authboss.EnsureCanCreate(r.Config.Storage.Server)

@@ -84,7 +84,7 @@ type ConfirmingServerStorer interface {
 
 	// LoadByConfirmSelector finds a user by his confirm selector field
 	// and should return ErrUserNotFound if that user cannot be found.
-	LoadByConfirmSelector(ctx context.Context, selector string) (ConfirmableUser, error)
+	LoadByConfirmSelector(ctx context.Context, selector string, customerToken string) (ConfirmableUser, error)
 }
 
 // RecoveringServerStorer allows users to be recovered by a token

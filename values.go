@@ -35,6 +35,7 @@ type ConfirmValuer interface {
 	Validator
 
 	GetToken() string
+	GetCustomerToken() string
 }
 
 // RecoverStartValuer provides the PID entered by the user.

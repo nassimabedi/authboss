@@ -9,6 +9,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/volatiletech/authboss"
+
+	"fmt"
 )
 
 // FormValue types
@@ -22,6 +24,9 @@ const (
 	FormValueCode         = "code"
 	FormValueRecoveryCode = "recovery_code"
 	FormValuePhoneNumber  = "phone_number"
+	//start
+	FormValueCustomerToken     = "customer_token"
+	//end
 )
 
 // UserValues from the login form
@@ -41,6 +46,7 @@ func (u UserValues) GetPID() string {
 
 // GetPassword from the values
 func (u UserValues) GetPassword() string {
+	fmt.Println(".................PPPPPPPPPPPPPPPPPPPPPPPP....................")
 	return u.Password
 }
 
@@ -60,12 +66,23 @@ type ConfirmValues struct {
 	HTTPFormValidator
 
 	Token string
+	//start
+	CustomerToken string
+	//end
 }
 
 // GetToken from the confirm values
 func (c ConfirmValues) GetToken() string {
 	return c.Token
 }
+
+//start
+func (c ConfirmValues) GetCustomerToken() string {
+	return c.CustomerToken
+}
+//end
+
+
 
 // RecoverStartValues for recover_start page
 type RecoverStartValues struct {
@@ -159,6 +176,7 @@ type HTTPBodyReader struct {
 // and fields for each page. If no defaults are required, simply construct
 // this using the struct members itself for more control.
 func NewHTTPBodyReader(readJSON, useUsernameNotEmail bool) *HTTPBodyReader {
+	fmt.Println("-------------------------NewHTTPBodyReader --------------------------------")
 	var pid string
 	var pidRules Rules
 
@@ -211,6 +229,7 @@ func NewHTTPBodyReader(readJSON, useUsernameNotEmail bool) *HTTPBodyReader {
 
 // Read the form pages
 func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, error) {
+	fmt.Println("--------------------------Read-----------------------------------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^----------------------:))))))))))")
 	var values map[string]string
 
 	if h.ReadJSON {
@@ -239,6 +258,7 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 		return ConfirmValues{
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules},
 			Token:             values[FormValueConfirm],
+			CustomerToken:	   values[FormValueCustomerToken] ,
 		}, nil
 	case "login":
 		var pid string

@@ -3,6 +3,9 @@ package authboss
 import (
 	"context"
 	"net/http"
+
+	"fmt"
+	//"encoding/json"
 )
 
 type contextKey string
@@ -35,11 +38,15 @@ func (c contextKey) String() string {
 // TODO(aarondl): This method never returns an error, one day we'll change
 // the function signature.
 func (a *Authboss) CurrentUserID(r *http.Request) (string, error) {
+	fmt.Println("......................CurrentUserID...........................")
 	if pid := r.Context().Value(CTXKeyPID); pid != nil {
+		fmt.Println("..................Hey I'm here :P...........................")
 		return pid.(string), nil
 	}
 
+	fmt.Println(".................SessionKey=%s...................", SessionKey)
 	pid, _ := GetSession(r, SessionKey)
+	fmt.Println(".................pid=%s...................", pid)
 	return pid, nil
 }
 
@@ -60,7 +67,43 @@ func (a *Authboss) CurrentUserIDP(r *http.Request) string {
 // Before the user is loaded from the database the context key is checked.
 // If the session doesn't have the user ID ErrUserNotFound will be returned.
 func (a *Authboss) CurrentUser(r *http.Request) (User, error) {
+	fmt.Println("----------------------------CurrentUser--------------------------:**********************")
+	contentType := r.Header.Get("Content-type")
+	fmt.Println(contentType)
+	if err := r.ParseForm(); err!= nil {
+		fmt.Println("..........eeeeeeeeeeeeeeeeeeeeee...........................")
+		return nil, err
+	}
+	//v := r.Form
+	//h := v.Get("name")
+	//fmt.Println(h)
+
+	//r.Context()
+	//fmt.Println(r.Context().Value("name"))
+	////fmt.Fprintf( "Hi there, I love %s!", r.URL.Path[1:])
+	////r.ParseForm()
+	//if err := r.ParseForm(); err != nil {
+	//	fmt.Println("..........eeeeeeeeeeeeeeeeeeeeee...........................")
+	//	return nil, err
+	//}
+	////fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
+	//val := r.FormValue("name")
+	//fmt.Println(val)
+	//
+	//
+	//var body = make(map[string]string)
+	//if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	//	//http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return nil, err
+	//}
+	//text := body["name"]
+	//fmt.Println(text)
+
+
+
+	//===================================
 	if user := r.Context().Value(CTXKeyUser); user != nil {
+		fmt.Println(".................I am Here :D..............................%s", CTXKeyUser)
 		return user.(User), nil
 	}
 
@@ -71,6 +114,7 @@ func (a *Authboss) CurrentUser(r *http.Request) (User, error) {
 		return nil, ErrUserNotFound
 	}
 
+	fmt.Println("........I am Here end :D.........pid = %s", pid)
 	return a.currentUser(r.Context(), pid)
 }
 
