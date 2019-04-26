@@ -91,8 +91,13 @@ func (r *Recover) StartPost(w http.ResponseWriter, req *http.Request) error {
 	}
 
 	recoverVals := authboss.MustHaveRecoverStartValues(validatable)
+	//start
+	//maybe find customerToken
+	customerToken := ""
+	//end
 
-	user, err := r.Authboss.Storage.Server.Load(req.Context(), recoverVals.GetPID())
+	//user, err := r.Authboss.Storage.Server.Load(req.Context(), recoverVals.GetPID())
+	user, err := r.Authboss.Storage.Server.Load(req.Context(), recoverVals.GetPID(), customerToken)
 	if err == authboss.ErrUserNotFound {
 		logger.Infof("user %s was attempted to be recovered, user does not exist, faking successful response", recoverVals.GetPID())
 		ro := authboss.RedirectOptions{

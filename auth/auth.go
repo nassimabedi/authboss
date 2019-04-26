@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"fmt"
 	"github.com/volatiletech/authboss"
 )
 
@@ -50,6 +51,7 @@ func (a *Auth) LoginGet(w http.ResponseWriter, r *http.Request) error {
 // LoginPost attempts to validate the credentials passed in
 // to log in a user.
 func (a *Auth) LoginPost(w http.ResponseWriter, r *http.Request) error {
+	fmt.Println("===================LoginPost=====================================")
 	logger := a.RequestLogger(r)
 
 	validatable, err := a.Authboss.Core.BodyReader.Read(PageLogin, r)
@@ -62,7 +64,16 @@ func (a *Auth) LoginPost(w http.ResponseWriter, r *http.Request) error {
 	creds := authboss.MustHaveUserValues(validatable)
 
 	pid := creds.GetPID()
-	pidUser, err := a.Authboss.Storage.Server.Load(r.Context(), pid)
+
+	//start
+	//authUser := authboss.MustBeAuthable(pidUser)
+	//customerToken := authUser.GetCustomerToken()
+	customerToken := creds.GetCustomerToken()
+	fmt.Println("=====================pid:%s=======cus_token:%s=================", pid, customerToken)
+	//end
+
+	pidUser, err := a.Authboss.Storage.Server.Load(r.Context(), pid, customerToken)
+	//pidUser, err := a.Authboss.Storage.Server.Load(r.Context(), pid)
 	if err == authboss.ErrUserNotFound {
 		logger.Infof("failed to load user requested by pid: %s", pid)
 		data := authboss.HTMLData{authboss.DataErr: "Invalid Credentials"}

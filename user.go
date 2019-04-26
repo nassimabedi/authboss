@@ -20,6 +20,10 @@ import (
 type User interface {
 	GetPID() (pid string)
 	PutPID(pid string)
+	//start
+	GetCustomerToken() (customer_token string)
+	PutCustomerToken(customer_token string)
+	//end
 }
 
 // AuthableUser is identified by a password
@@ -28,6 +32,10 @@ type AuthableUser interface {
 
 	GetPassword() (password string)
 	PutPassword(password string)
+	//start
+	//GetCustomerToken() (customer_token string)
+	//PutCustomerToken(customer_token string)
+	//end
 }
 
 // ConfirmableUser can be in a state of confirmed or not
@@ -35,13 +43,13 @@ type ConfirmableUser interface {
 	User
 
 	GetEmail() (email string)
-	GetCustomerToken() (customer_token string)
+	//GetCustomerToken() (customer_token string)
 	GetConfirmed() (confirmed bool)
 	GetConfirmSelector() (selector string)
 	GetConfirmVerifier() (verifier string)
 
 	PutEmail(email string)
-	PutCustomerToken(customer_token string)
+	//PutCustomerToken(customer_token string)
 	PutConfirmed(confirmed bool)
 	PutConfirmSelector(selector string)
 	PutConfirmVerifier(verifier string)

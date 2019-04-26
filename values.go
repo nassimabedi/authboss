@@ -28,6 +28,7 @@ type UserValuer interface {
 
 	GetPID() string
 	GetPassword() string
+	GetCustomerToken() string
 }
 
 // ConfirmValuer allows us to pull out the token from the request

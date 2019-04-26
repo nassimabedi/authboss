@@ -28,7 +28,10 @@ var (
 // and giving them a context with which to store themselves.
 type ServerStorer interface {
 	// Load will look up the user based on the passed the PrimaryID
-	Load(ctx context.Context, key string) (User, error)
+	//start
+	Load(ctx context.Context, key string, customerToken string) (User, error)
+	//Load(ctx context.Context, key string) (User, error)
+	//end
 
 	// Save persists the user in the database, this should never
 	// create a user and instead return ErrUserNotFound if the user

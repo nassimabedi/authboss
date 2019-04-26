@@ -396,7 +396,12 @@ func (t *TOTP) validate(r *http.Request) (User, bool, error) {
 	if err == authboss.ErrUserNotFound {
 		pid, ok := authboss.GetSession(r, SessionTOTPPendingPID)
 		if ok && len(pid) != 0 {
-			abUser, err = t.Authboss.Config.Storage.Server.Load(r.Context(), pid)
+			//start
+			customerToken := ""
+			//end
+
+			//abUser, err = t.Authboss.Config.Storage.Server.Load(r.Context(), pid)
+			abUser, err = t.Authboss.Config.Storage.Server.Load(r.Context(), pid, customerToken)
 		}
 	}
 	if err != nil {

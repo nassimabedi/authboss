@@ -297,7 +297,11 @@ func (s *SMSValidator) Post(w http.ResponseWriter, r *http.Request) error {
 	if err == authboss.ErrUserNotFound {
 		pid, ok := authboss.GetSession(r, SessionSMSPendingPID)
 		if ok && len(pid) != 0 {
-			abUser, err = s.Authboss.Config.Storage.Server.Load(r.Context(), pid)
+			//start
+			customerToken := ""
+			//end
+			//abUser, err = s.Authboss.Config.Storage.Server.Load(r.Context(), pid)
+			abUser, err = s.Authboss.Config.Storage.Server.Load(r.Context(), pid, customerToken)
 		}
 	}
 	if err != nil {

@@ -47,6 +47,11 @@ func (a *Authboss) CurrentUserID(r *http.Request) (string, error) {
 	fmt.Println(".................SessionKey=%s...................", SessionKey)
 	pid, _ := GetSession(r, SessionKey)
 	fmt.Println(".................pid=%s...................", pid)
+
+	fmt.Println(".................SessionKey=%s...................", "customer_token")
+	customerToken, _ := GetSession(r, "customer_token")
+	fmt.Println(".................pid=%s...................", customerToken)
+
 	return pid, nil
 }
 
@@ -90,20 +95,10 @@ func (a *Authboss) CurrentUser(r *http.Request) (User, error) {
 	//val := r.FormValue("name")
 	//fmt.Println(val)
 	//
-	//
-	//var body = make(map[string]string)
-	//if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-	//	//http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return nil, err
-	//}
-	//text := body["name"]
-	//fmt.Println(text)
-
-
-
 	//===================================
 	if user := r.Context().Value(CTXKeyUser); user != nil {
-		fmt.Println(".................I am Here :D..............................%s", CTXKeyUser)
+		fmt.Println(".................I am Here correct :D............user.all:%s.......cusToekn:%s...%s........", CTXKeyUser,
+			user.(User),user.(User).GetPID(), user.(User).GetCustomerToken())
 		return user.(User), nil
 	}
 
@@ -131,7 +126,13 @@ func (a *Authboss) CurrentUserP(r *http.Request) User {
 }
 
 func (a *Authboss) currentUser(ctx context.Context, pid string) (User, error) {
-	return a.Storage.Server.Load(ctx, pid)
+	//return a.Storage.Server.Load(ctx, pid, customerToken)
+	fmt.Println("-----------currentUser-----before save......-------------------------")
+	//start
+	customerToken := ""
+	//end
+	//return a.Storage.Server.Load(ctx, pid)
+	return a.Storage.Server.Load(ctx, pid, customerToken)
 }
 
 // LoadCurrentUserID takes a pointer to a pointer to the request in order to
@@ -170,6 +171,7 @@ func (a *Authboss) LoadCurrentUserIDP(r **http.Request) string {
 // contains the new context that has the user in it. Calls LoadCurrentUserID
 // so the primary id is also put in the context.
 func (a *Authboss) LoadCurrentUser(r **http.Request) (User, error) {
+	fmt.Println("******************LoadCurrentUser********************************")
 	if user := (*r).Context().Value(CTXKeyUser); user != nil {
 		return user.(User), nil
 	}

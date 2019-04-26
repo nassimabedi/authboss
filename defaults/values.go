@@ -35,6 +35,7 @@ type UserValues struct {
 
 	PID      string
 	Password string
+	CustomerToken string
 
 	Arbitrary map[string]string
 }
@@ -49,6 +50,14 @@ func (u UserValues) GetPassword() string {
 	fmt.Println(".................PPPPPPPPPPPPPPPPPPPPPPPP....................")
 	return u.Password
 }
+
+//start
+// GetPassword from the values
+func (u UserValues) GetCustomerToken() string {
+        return u.CustomerToken
+}
+
+//end
 
 // GetValues from the form.
 func (u UserValues) GetValues() map[string]string {
@@ -272,6 +281,7 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},
 			PID:               pid,
 			Password:          values[FormValuePassword],
+			CustomerToken:     values[FormValueCustomerToken] ,
 		}, nil
 	case "recover_start":
 		var pid string

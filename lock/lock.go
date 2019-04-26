@@ -116,7 +116,11 @@ func (l *Lock) AfterAuthFail(w http.ResponseWriter, r *http.Request, handled boo
 
 // Lock a user manually.
 func (l *Lock) Lock(ctx context.Context, key string) error {
-	user, err := l.Authboss.Config.Storage.Server.Load(ctx, key)
+	//start
+	customerToken := ""
+	//end
+	//user, err := l.Authboss.Config.Storage.Server.Load(ctx, key)
+	user, err := l.Authboss.Config.Storage.Server.Load(ctx, key, customerToken)
 	if err != nil {
 		return err
 	}
@@ -129,7 +133,11 @@ func (l *Lock) Lock(ctx context.Context, key string) error {
 
 // Unlock a user that was locked by this module.
 func (l *Lock) Unlock(ctx context.Context, key string) error {
-	user, err := l.Authboss.Config.Storage.Server.Load(ctx, key)
+	//start
+        customerToken := ""
+	//end
+	//user, err := l.Authboss.Config.Storage.Server.Load(ctx, key)
+	user, err := l.Authboss.Config.Storage.Server.Load(ctx, key, customerToken)
 	if err != nil {
 		return err
 	}
