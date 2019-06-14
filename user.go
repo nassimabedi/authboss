@@ -33,8 +33,8 @@ type AuthableUser interface {
 	GetPassword() (password string)
 	PutPassword(password string)
 	//start
-	//GetCustomerToken() (customer_token string)
-	//PutCustomerToken(customer_token string)
+	// GetCustomerToken() (customer_token string)
+	// PutCustomerToken(customer_token string)
 	//end
 }
 

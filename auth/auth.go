@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"fmt"
+
 	"github.com/volatiletech/authboss"
 )
 
@@ -68,7 +69,8 @@ func (a *Auth) LoginPost(w http.ResponseWriter, r *http.Request) error {
 	//start
 	//authUser := authboss.MustBeAuthable(pidUser)
 	//customerToken := authUser.GetCustomerToken()
-	customerToken := creds.GetCustomerToken()
+	// customerToken := creds.GetCustomerToken()
+	customerToken := "kiss_customer"
 	fmt.Println("=====================pid:%s=======cus_token:%s=================", pid, customerToken)
 	//end
 

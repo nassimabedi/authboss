@@ -90,9 +90,9 @@ func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
 	// Get values from request
 	userVals := authboss.MustHaveUserValues(validatable)
 	pid, password := userVals.GetPID(), userVals.GetPassword()
-	val := preserve["customer_token"]
+	// val := preserve["customer_token"]
 	//cus_token := userVals.GetValues()["customer_token"]
-	fmt.Println("..........pid:%s.........Password:%s---------------val:%s-----", pid, password,val)
+	// fmt.Println("..........pid:%s.........Password:%s---------------val:%s-----", pid, password,val)
 
 	// Put values into newly created user for storage
 	storer := authboss.EnsureCanCreate(r.Config.Storage.Server)
@@ -105,6 +105,10 @@ func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
 
 	user.PutPID(pid)
 	user.PutPassword(string(pass))
+	//start
+	bb := req.Header.Get("customer_token")
+	user.PutCustomerToken(string(bb))
+	//end
 
 	if arbUser, ok := user.(authboss.ArbitraryUser); ok && arbitrary != nil {
 		arbUser.PutArbitrary(arbitrary)

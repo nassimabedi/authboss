@@ -25,7 +25,7 @@ const (
 	FormValueRecoveryCode = "recovery_code"
 	FormValuePhoneNumber  = "phone_number"
 	//start
-	FormValueCustomerToken     = "customer_token"
+	FormValueCustomerToken = "customer_token"
 	//end
 )
 
@@ -33,8 +33,8 @@ const (
 type UserValues struct {
 	HTTPFormValidator
 
-	PID      string
-	Password string
+	PID           string
+	Password      string
 	CustomerToken string
 
 	Arbitrary map[string]string
@@ -54,7 +54,8 @@ func (u UserValues) GetPassword() string {
 //start
 // GetPassword from the values
 func (u UserValues) GetCustomerToken() string {
-        return u.CustomerToken
+	// return u.CustomerToken
+	return "kiss_customer"
 }
 
 //end
@@ -89,9 +90,8 @@ func (c ConfirmValues) GetToken() string {
 func (c ConfirmValues) GetCustomerToken() string {
 	return c.CustomerToken
 }
+
 //end
-
-
 
 // RecoverStartValues for recover_start page
 type RecoverStartValues struct {
@@ -239,6 +239,10 @@ func NewHTTPBodyReader(readJSON, useUsernameNotEmail bool) *HTTPBodyReader {
 // Read the form pages
 func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, error) {
 	fmt.Println("--------------------------Read-----------------------------------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^----------------------:))))))))))")
+	aa := r.Header.Get("User-Agent")
+	fmt.Printf("----------user-agent:%s-----------\n", aa)
+	bb := r.Header.Get("customer_token")
+	fmt.Printf("----------customer_token:%s-----------\n", bb)
 	var values map[string]string
 
 	if h.ReadJSON {
@@ -267,7 +271,8 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 		return ConfirmValues{
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules},
 			Token:             values[FormValueConfirm],
-			CustomerToken:	   values[FormValueCustomerToken] ,
+			// CustomerToken:     values[FormValueCustomerToken],
+			CustomerToken: bb,
 		}, nil
 	case "login":
 		var pid string
@@ -281,7 +286,7 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},
 			PID:               pid,
 			Password:          values[FormValuePassword],
-			CustomerToken:     values[FormValueCustomerToken] ,
+			CustomerToken:     values[FormValueCustomerToken],
 		}, nil
 	case "recover_start":
 		var pid string
@@ -348,7 +353,10 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},
 			PID:               pid,
 			Password:          values[FormValuePassword],
-			Arbitrary:         arbitrary,
+			//start
+			CustomerToken: bb,
+			//end
+			Arbitrary: arbitrary,
 		}, nil
 	default:
 		return nil, errors.Errorf("failed to parse unknown page's form: %s", page)
@@ -357,6 +365,7 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 
 // URLValuesToMap helps create a map from url.Values
 func URLValuesToMap(form url.Values) map[string]string {
+	fmt.Println("-----------------URLValuesToMap--------------------------------------")
 	values := make(map[string]string)
 
 	for k, v := range form {

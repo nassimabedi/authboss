@@ -75,7 +75,7 @@ func (a *Authboss) CurrentUser(r *http.Request) (User, error) {
 	fmt.Println("----------------------------CurrentUser--------------------------:**********************")
 	contentType := r.Header.Get("Content-type")
 	fmt.Println(contentType)
-	if err := r.ParseForm(); err!= nil {
+	if err := r.ParseForm(); err != nil {
 		fmt.Println("..........eeeeeeeeeeeeeeeeeeeeee...........................")
 		return nil, err
 	}
@@ -97,8 +97,11 @@ func (a *Authboss) CurrentUser(r *http.Request) (User, error) {
 	//
 	//===================================
 	if user := r.Context().Value(CTXKeyUser); user != nil {
-		fmt.Println(".................I am Here correct :D............user.all:%s.......cusToekn:%s...%s........", CTXKeyUser,
-			user.(User),user.(User).GetPID(), user.(User).GetCustomerToken())
+		// fmt.Println(".................I am Here correct :D............user.all:%s.......cusToekn:%s...%s........", CTXKeyUser,
+		// 	user.(User),user.(User).GetPID(), user.(User).GetCustomerToken())
+
+		fmt.Println(".................I am Here correct :D............user.all:%s...............", CTXKeyUser,
+			user.(User), user.(User).GetPID())
 		return user.(User), nil
 	}
 
