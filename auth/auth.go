@@ -70,7 +70,8 @@ func (a *Auth) LoginPost(w http.ResponseWriter, r *http.Request) error {
 	//authUser := authboss.MustBeAuthable(pidUser)
 	//customerToken := authUser.GetCustomerToken()
 	// customerToken := creds.GetCustomerToken()
-	customerToken := "kiss_customer"
+	// customerToken := "kiss_customer"
+	customerToken := r.Header.Get("customer_token")
 	fmt.Println("=====================pid:%s=======cus_token:%s=================", pid, customerToken)
 	//end
 

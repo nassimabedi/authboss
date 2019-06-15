@@ -286,7 +286,8 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},
 			PID:               pid,
 			Password:          values[FormValuePassword],
-			CustomerToken:     values[FormValueCustomerToken],
+			// CustomerToken:     values[FormValueCustomerToken],
+			CustomerToken:     bb,
 		}, nil
 	case "recover_start":
 		var pid string

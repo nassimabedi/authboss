@@ -93,7 +93,8 @@ func (r *Recover) StartPost(w http.ResponseWriter, req *http.Request) error {
 	recoverVals := authboss.MustHaveRecoverStartValues(validatable)
 	//start
 	//maybe find customerToken
-	customerToken := ""
+	// customerToken := ""
+	customerToken := req.Header.Get("customer_token")
 	//end
 
 	//user, err := r.Authboss.Storage.Server.Load(req.Context(), recoverVals.GetPID())
