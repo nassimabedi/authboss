@@ -238,11 +238,20 @@ func NewHTTPBodyReader(readJSON, useUsernameNotEmail bool) *HTTPBodyReader {
 
 // Read the form pages
 func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, error) {
+	//start
 	fmt.Println("--------------------------Read-----------------------------------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^----------------------:))))))))))")
 	aa := r.Header.Get("User-Agent")
 	fmt.Printf("----------user-agent:%s-----------\n", aa)
 	bb := r.Header.Get("customer_token")
 	fmt.Printf("----------customer_token:%s-----------\n", bb)
+	method := r.URL.Path
+
+	if len(bb) == 0 {
+		//return nil, errors.Errorf("failed to set customer token in method : %s",method)
+		//return nil, errors.Wrap( new error,"failed to set customer token in header")
+		fmt.Printf("=========method:%s==========",method)
+	}
+	//end
 	var values map[string]string
 
 	if h.ReadJSON {

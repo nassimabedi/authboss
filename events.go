@@ -1,6 +1,7 @@
 package authboss
 
 import (
+	"fmt"
 	"net/http"
 )
 
@@ -39,10 +40,18 @@ const (
 // Very much a controller level middleware.
 type EventHandler func(w http.ResponseWriter, r *http.Request, handled bool) (bool, error)
 
+//start
+type EventHandlerCus func(w http.ResponseWriter, r *http.Request, ro RedirectOptions, handled bool) (bool, error)
+
+//end
+
 // Events is a collection of Events that fire before and after certain methods.
 type Events struct {
 	before map[Event][]EventHandler
 	after  map[Event][]EventHandler
+	//start
+	afterCus map[Event][]EventHandlerCus
+	//end
 }
 
 // NewEvents creates a new set of before and after Events.
@@ -50,6 +59,9 @@ func NewEvents() *Events {
 	return &Events{
 		before: make(map[Event][]EventHandler),
 		after:  make(map[Event][]EventHandler),
+		//start
+		afterCus: make(map[Event][]EventHandlerCus),
+		//end
 	}
 }
 
@@ -62,9 +74,18 @@ func (c *Events) Before(e Event, f EventHandler) {
 
 // After event, call f.
 func (c *Events) After(e Event, f EventHandler) {
+	fmt.Println("####################aaaaaaaaaaaaaaaaaaaaaa#######################")
 	events := c.after[e]
 	events = append(events, f)
 	c.after[e] = events
+}
+
+//After even cus
+func (c *Events) AfterCuss(e Event, f EventHandlerCus) {
+	fmt.Println("####################aaaaaaaaaaaaaaaaaaaaaa#######################")
+	events := c.afterCus[e]
+	events = append(events, f)
+	c.afterCus[e] = events
 }
 
 // FireBefore executes the handlers that were registered to fire before
@@ -86,10 +107,38 @@ func (c *Events) FireAfter(e Event, w http.ResponseWriter, r *http.Request) (boo
 	return c.call(c.after[e], w, r)
 }
 
+//start
+func (c *Events) FireAfterCustom(e Event, w http.ResponseWriter, r *http.Request, ro RedirectOptions) (bool, error) {
+	return c.callCustom(c.afterCus[e], w, r, ro)
+}
+
+// func (c *Events) callCustom(evs []EventHandlerCus, w http.ResponseWriter, r *http.Request, ro RedirectOptions) (bool, error) {
+func (c *Events) callCustom(evs []EventHandlerCus, w http.ResponseWriter, r *http.Request, ro RedirectOptions) (bool, error) {
+	handled := false
+	fmt.Println(ro)
+	fmt.Println("----------callCustom--------------")
+	for _, fn := range evs {
+		fmt.Println(fn)
+		interrupt, err := fn(w, r, ro, handled)
+		// interrupt, err := fn(w, r, handled)
+		if err != nil {
+			return false, err
+		}
+		if interrupt {
+			handled = true
+		}
+	}
+
+	return handled, nil
+}
+
+//end
+
 func (c *Events) call(evs []EventHandler, w http.ResponseWriter, r *http.Request) (bool, error) {
 	handled := false
-
+	fmt.Println("------------call---------------------")
 	for _, fn := range evs {
+		fmt.Println(fn)
 		interrupt, err := fn(w, r, handled)
 		if err != nil {
 			return false, err

@@ -54,6 +54,7 @@ type RedirectOptions struct {
 	// parameter.
 	RedirectPath     string
 	FollowRedirParam bool
+	UserEmail             string
 }
 
 // EmailResponseOptions controls how e-mails are rendered and sent

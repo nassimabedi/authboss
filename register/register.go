@@ -55,7 +55,7 @@ func (r *Register) Get(w http.ResponseWriter, req *http.Request) error {
 
 // Post to the register page
 func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
-	fmt.Println("................................Post Register..............................<<<<<<<<<<<")
+	fmt.Println("................................Post Register..............................<<<<<11111<<<<<<")
 	logger := r.RequestLogger(req)
 	validatable, err := r.Core.BodyReader.Read(PageRegister, req)
 	if err != nil {
@@ -87,6 +87,7 @@ func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
 		return r.Config.Core.Responder.Respond(w, req, http.StatusOK, PageRegister, data)
 	}
 
+	fmt.Println("................................Post Register..............................<<<<<22222<<<<<<")
 	// Get values from request
 	userVals := authboss.MustHaveUserValues(validatable)
 	pid, password := userVals.GetPID(), userVals.GetPassword()
@@ -130,23 +131,56 @@ func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
 		return err
 	}
 
+	fmt.Println("................................Post Register..............................<<<<<333333<<<<<<")
+	fmt.Println(pid)
+	//start
+	authboss.PutSession(w, authboss.SessionKey, pid)
+	//end
 	req = req.WithContext(context.WithValue(req.Context(), authboss.CTXKeyUser, user))
+	fmt.Println("................................Post Register..............................<<<<<4444444<<<<<<")
+	// cc := "sasd"
+	//start
 	handled, err := r.Events.FireAfter(authboss.EventRegister, w, req)
+
+	// roCus := authboss.RedirectOptions{
+	// 	Code:         http.StatusTemporaryRedirect,
+	// 	Success:      "Account successfully created, you are now logged in",
+	// 	RedirectPath: r.Config.Paths.RegisterOK,
+	// 	//start
+	// 	UserEmail: pid,
+	// 	//end
+	// }
+
+	// authboss.PutSession(w, authboss.SessionKey, pid)
+	// handled, err := r.Events.FireAfterCustom(authboss.EventRegister, w, req, roCus)
+	// //end
+
+	fmt.Println(handled)
 	if err != nil {
+		fmt.Println("............................... return err ..................................")
 		return err
 	} else if handled {
+		fmt.Println("............................... return nil ..........>>>>........................")
 		return nil
 	}
+	// return nil
+	fmt.Println("................................Post Register..............................<<<<<5555555<<<<<<")
 
 	// Log the user in, but only if the response wasn't handled previously
 	// by a module like confirm.
 	authboss.PutSession(w, authboss.SessionKey, pid)
+
+	fmt.Println("................................Post Register..............................<<<<<555555<<<<<<")
+	fmt.Println(pid)
 
 	logger.Infof("registered and logged in user %s", pid)
 	ro := authboss.RedirectOptions{
 		Code:         http.StatusTemporaryRedirect,
 		Success:      "Account successfully created, you are now logged in",
 		RedirectPath: r.Config.Paths.RegisterOK,
+		//start
+		UserEmail: pid,
+		//end
 	}
 	return r.Config.Core.Redirector.Redirect(w, req, ro)
 }

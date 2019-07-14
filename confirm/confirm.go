@@ -71,6 +71,9 @@ func (c *Confirm) Init(ab *authboss.Authboss) (err error) {
 
 	c.Events.Before(authboss.EventAuth, c.PreventAuth)
 	c.Events.After(authboss.EventRegister, c.StartConfirmationWeb)
+	//start
+	c.Events.AfterCuss(authboss.EventRegister, c.StartConfirmationWebCus)
+	//end
 
 	return nil
 }
@@ -133,9 +136,51 @@ func (c *Confirm) StartConfirmationWeb(w http.ResponseWriter, r *http.Request, h
 	return true, c.Authboss.Config.Core.Redirector.Redirect(w, r, ro)
 }
 
+func (c *Confirm) StartConfirmationWebCus(w http.ResponseWriter, r *http.Request, ro authboss.RedirectOptions, handled bool) (bool, error) {
+	//----- Begin : Nassim
+	fmt.Println("<<<<<<<<<<<<<<<<<<<<<-------------StartConfirmationWeb----------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+	//----- End : Nassim
+
+	user, err := c.Authboss.CurrentUser(r)
+	if err != nil {
+		return false, err
+	}
+
+	cuser := authboss.MustBeConfirmable(user)
+	//start
+	bb := r.Header.Get("customer_token")
+	if err = c.StartConfirmation(r.Context(), cuser, true, bb); err != nil {
+		return false, err
+	}
+	// if err = c.StartConfirmation(r.Context(), cuser, true); err != nil {
+	// 	return false, err
+	// }
+
+	//end
+
+	// ro := authboss.RedirectOptions{
+	// 	Code:         http.StatusTemporaryRedirect,
+	// 	RedirectPath: c.Authboss.Config.Paths.ConfirmNotOK,
+	// 	Success:      "Please verify your account, an e-mail has been sent to you.",
+	// }
+
+	ro.Code = http.StatusTemporaryRedirect
+	ro.RedirectPath = c.Authboss.Config.Paths.ConfirmNotOK
+	ro.Success = "Please verify your account, an e-mail has been sent to you."
+	// Code: http.StatusTemporaryRedirect,
+	// 	RedirectPath: c.Authboss.Config.Paths.ConfirmNotOK,
+	// 	Success:      "Please verify your account, an e-mail has been sent to you.",
+
+	return true, c.Authboss.Config.Core.Redirector.Redirect(w, r, ro)
+}
+
 // StartConfirmation begins confirmation on a user by setting them to require
 // confirmation via a created token, and optionally sending them an e-mail.
 func (c *Confirm) StartConfirmation(ctx context.Context, user authboss.ConfirmableUser, sendEmail bool, customerToken string) error {
+	//----- Begin : Nassim
+	fmt.Println("<<<<<<<<<<<|||<<<<<<<<<<-------------StartConfirmation token----------------->>>>>>>>>>|||>>>>>>>>>>>>>>>>>>")
+	//----- End : Nassim
+
 	logger := c.Authboss.Logger(ctx)
 
 	selector, verifier, token, err := GenerateConfirmCreds()
@@ -156,7 +201,7 @@ func (c *Confirm) StartConfirmation(ctx context.Context, user authboss.Confirmab
 
 	// goConfirmEmail(c, ctx, user.GetEmail(), token, user.GetCustomerToken())
 
-	logger.Infof(".............start confirmation %s", customerToken)
+	logger.Infof(".............sssstart confirmation %s", customerToken)
 	goConfirmEmail(c, ctx, user.GetEmail(), token, customerToken)
 
 	return nil
@@ -170,7 +215,7 @@ var goConfirmEmail = func(c *Confirm, ctx context.Context, to, token string, cus
 // SendConfirmEmail sends a confirmation e-mail to a user
 func (c *Confirm) SendConfirmEmail(ctx context.Context, to, token string, customerToken string) {
 	logger := c.Authboss.Logger(ctx)
-
+	logger.Infof(".............SendConfirmEmail %s", customerToken)
 	mailURL := c.mailURL(token, customerToken)
 
 	email := authboss.Email{
