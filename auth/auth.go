@@ -71,7 +71,7 @@ func (a *Auth) LoginPost(w http.ResponseWriter, r *http.Request) error {
 	//customerToken := authUser.GetCustomerToken()
 	// customerToken := creds.GetCustomerToken()
 	// customerToken := "kiss_customer"
-	customerToken := r.Header.Get("customer_token")
+	customerToken := r.Header.Get("X-Consumer-ID")
 	fmt.Println("=====================pid:%s=======cus_token:%s=================", pid, customerToken)
 	//end
 

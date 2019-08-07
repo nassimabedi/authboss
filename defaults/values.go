@@ -242,7 +242,8 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 	fmt.Println("--------------------------Read-----------------------------------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^----------------------:))))))))))")
 	aa := r.Header.Get("User-Agent")
 	fmt.Printf("----------user-agent:%s-----------\n", aa)
-	bb := r.Header.Get("customer_token")
+	//bb := r.Header.Get("customer_token")
+	bb := r.Header.Get("X-Consumer-ID")
 	fmt.Printf("----------customer_token:%s-----------\n", bb)
 	method := r.URL.Path
 

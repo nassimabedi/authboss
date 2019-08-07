@@ -175,7 +175,7 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 
 	//start
 	if method == "/register" {
-		fmt.Println("==================here===================>>>>>>>>>")
+		fmt.Println("==================here===1111===:%s=============>>>>>>>>>",status)
 		fmt.Println(ro.FollowRedirParam)
 		fmt.Println(authboss.User.GetPID)
 		fmt.Println(ro.UserEmail)
@@ -183,6 +183,9 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 		fmt.Println(ro.Code)
 		fmt.Println(ro.FollowRedirParam)
 		fmt.Println(ro.Failure)
+		if ro.Code == 307 {
+			ro.Code = 200
+		}
 		// pid, ok := authboss.GetSession(req, authboss.SessionKey)
 		// fmt.Println(pid)
 		// fmt.Println(ok)
@@ -198,7 +201,15 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 		var myslice []string
 		data["roles"] = myslice
 		data["permissions"] = myslice
+		//if status == "307" && method == "/register" {
+                //    status = "200"
+		//}
 	}
+	if status == "307" && method == "/register" {
+	    fmt.Println("===============register status 307")
+            status = "200"
+        }
+
 	//end
 
 	data["status"] = status
@@ -216,9 +227,13 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 	}
 
 	if ro.Code != 0 {
-		if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect) {
+		//TODO : delete 307
+		//if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect) {
+		if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect || ro.Code == 307) {
+
 			w.WriteHeader(http.StatusOK)
 		} else {
+			fmt.Println("===================================man ro.code hastam :%s====",ro.Code)
 			w.WriteHeader(ro.Code)
 		}
 	}

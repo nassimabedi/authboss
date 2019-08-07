@@ -118,7 +118,8 @@ func (c *Confirm) StartConfirmationWeb(w http.ResponseWriter, r *http.Request, h
 
 	cuser := authboss.MustBeConfirmable(user)
 	//start
-	bb := r.Header.Get("customer_token")
+	//bb := r.Header.Get("customer_token")
+	bb := r.Header.Get("X-Consumer-ID")
 	if err = c.StartConfirmation(r.Context(), cuser, true, bb); err != nil {
 		return false, err
 	}
@@ -148,7 +149,8 @@ func (c *Confirm) StartConfirmationWebCus(w http.ResponseWriter, r *http.Request
 
 	cuser := authboss.MustBeConfirmable(user)
 	//start
-	bb := r.Header.Get("customer_token")
+	//bb := r.Header.Get("customer_token")
+	bb := r.Header.Get("X-Consumer-ID")
 	if err = c.StartConfirmation(r.Context(), cuser, true, bb); err != nil {
 		return false, err
 	}
@@ -279,7 +281,8 @@ func (c *Confirm) Get(w http.ResponseWriter, r *http.Request) error {
 	//user, err := storer.LoadByConfirmSelector(r.Context(), selector)
 	// fmt.Printf("------------------------customerTokenConfirm:%s--------------", values.GetCustomerToken())
 	// user, err := storer.LoadByConfirmSelector(r.Context(), selector, values.GetCustomerToken())
-	bb := r.Header.Get("customer_token")
+	//bb := r.Header.Get("customer_token")
+	bb := r.Header.Get("X-Consumer-ID")
 	fmt.Printf("------------------------customerTokenConfirm:%s--------------\n", bb)
 	user, err := storer.LoadByConfirmSelector(r.Context(), selector, bb)
 	//====================End

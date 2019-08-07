@@ -107,7 +107,17 @@ func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
 	user.PutPID(pid)
 	user.PutPassword(string(pass))
 	//start
-	bb := req.Header.Get("customer_token")
+	//bb := req.Header.Get("customer_token")
+	bb := req.Header.Get("X-Consumer-ID")
+	x_consumer_id := req.Header.Get("X-Consumer-ID")
+	xx := req.Header.Get("x-kia-header")
+
+	apieco_key := req.Header.Get("apieco_key")
+        logger.Infof("===========bb:%s==========================", bb)
+	logger.Infof("===========apieco_key:%s==========================", apieco_key)
+	logger.Infof("===============x_consumer_id:%s====================",x_consumer_id)
+	logger.Infof("===============x_kia_header:%s====================",xx)
+
 	user.PutCustomerToken(string(bb))
 	//end
 
@@ -140,19 +150,19 @@ func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
 	fmt.Println("................................Post Register..............................<<<<<4444444<<<<<<")
 	// cc := "sasd"
 	//start
-	handled, err := r.Events.FireAfter(authboss.EventRegister, w, req)
+	// handled, err := r.Events.FireAfter(authboss.EventRegister, w, req)
 
-	// roCus := authboss.RedirectOptions{
-	// 	Code:         http.StatusTemporaryRedirect,
-	// 	Success:      "Account successfully created, you are now logged in",
-	// 	RedirectPath: r.Config.Paths.RegisterOK,
-	// 	//start
-	// 	UserEmail: pid,
-	// 	//end
-	// }
+	roCus := authboss.RedirectOptions{
+		Code:         http.StatusTemporaryRedirect,
+		Success:      "Account successfully created, you are now logged in",
+		RedirectPath: r.Config.Paths.RegisterOK,
+		//start
+		UserEmail: pid,
+		//end
+	}
 
 	// authboss.PutSession(w, authboss.SessionKey, pid)
-	// handled, err := r.Events.FireAfterCustom(authboss.EventRegister, w, req, roCus)
+	handled, err := r.Events.FireAfterCustom(authboss.EventRegister, w, req, roCus)
 	// //end
 
 	fmt.Println(handled)
