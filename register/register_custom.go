@@ -1,4 +1,3 @@
-// Package register allows for user registration.
 package register
 
 import (
@@ -7,28 +6,21 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-
 	"github.com/volatiletech/authboss"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Pages
-const (
-	PageRegister = "register"
-)
-
 func init() {
-	authboss.RegisterModule("register", &Register{})
+	authboss.RegisterModule("register-custom", &Interceptor{})
 }
 
-// Register module.
-type Register struct {
-	*authboss.Authboss
+type Interceptor struct {
+	origWriter  *authboss.Authboss
+	RegisterCus Register
 }
 
-// Init the module.
-func (r *Register) Init(ab *authboss.Authboss) (err error) {
-	r.Authboss = ab
+func (i *Interceptor) Init(ab *authboss.Authboss) (err error) {
+	i.origWriter = ab
 
 	if _, ok := ab.Config.Storage.ServerCustom.(authboss.CreatingServerStorerCustom); !ok {
 		return errors.New("register module activated but storer could not be upgraded to CreatingServerStorer")
@@ -40,21 +32,18 @@ func (r *Register) Init(ab *authboss.Authboss) (err error) {
 
 	sort.Strings(ab.Config.Modules.RegisterPreserveFields)
 
-	ab.Config.Core.Router.Get("/register", ab.Config.Core.ErrorHandler.Wrap(r.Get))
-	// ab.Config.Core.Router.Post("/register", ab.Config.Core.ErrorHandler.Wrap(r.Post))
+	// ab.Config.Core.Router.Get("/register", ab.Config.Core.ErrorHandler.Wrap(i.Get))
+	ab.Config.Core.Router.Post("/register", ab.Config.Core.ErrorHandler.Wrap(i.Post))
 
 	return nil
+
 }
 
-// Get the register page
-func (r *Register) Get(w http.ResponseWriter, req *http.Request) error {
-	return r.Config.Core.Responder.Respond(w, req, http.StatusOK, PageRegister, nil)
-}
 
-// Post to the register page
-func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
-	logger := r.RequestLogger(req)
-	validatable, err := r.Core.BodyReader.Read(PageRegister, req)
+func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
+
+	logger := i.origWriter.RequestLogger(req)
+	validatable, err := i.origWriter.Core.BodyReader.Read(PageRegister, req)
 	if err != nil {
 		return err
 	}
@@ -66,7 +55,7 @@ func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
 		preserve = make(map[string]string)
 
 		for k, v := range arbitrary {
-			if hasString(r.Config.Modules.RegisterPreserveFields, k) {
+			if hasString(i.origWriter.Config.Modules.RegisterPreserveFields, k) {
 				preserve[k] = v
 			}
 		}
@@ -81,7 +70,7 @@ func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
 		if preserve != nil {
 			data[authboss.DataPreserve] = preserve
 		}
-		return r.Config.Core.Responder.Respond(w, req, http.StatusOK, PageRegister, data)
+		return i.origWriter.Config.Core.Responder.Respond(w, req, http.StatusOK, PageRegister, data)
 	}
 
 	// Get values from request
@@ -89,16 +78,23 @@ func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
 	pid, password := userVals.GetPID(), userVals.GetPassword()
 
 	// Put values into newly created user for storage
-	storer := authboss.EnsureCanCreate(r.Config.Storage.Server)
+	storer := authboss.EnsureCanCreateCus(i.origWriter.Config.Storage.ServerCustom)
 	user := authboss.MustBeAuthable(storer.New(req.Context()))
 
-	pass, err := bcrypt.GenerateFromPassword([]byte(password), r.Config.Modules.BCryptCost)
+	pass, err := bcrypt.GenerateFromPassword([]byte(password), i.origWriter.Config.Modules.BCryptCost)
 	if err != nil {
 		return err
 	}
 
 	user.PutPID(pid)
 	user.PutPassword(string(pass))
+	//start
+	//bb := req.Header.Get("X-Consumer-ID")
+	x_consumer_id := req.Header.Get("X-Consumer-ID")
+
+
+	user.PutCustomerToken(string(x_consumer_id))
+	//end
 
 	if arbUser, ok := user.(authboss.ArbitraryUser); ok && arbitrary != nil {
 		arbUser.PutArbitrary(arbitrary)
@@ -115,39 +111,47 @@ func (r *Register) Post(w http.ResponseWriter, req *http.Request) error {
 		if preserve != nil {
 			data[authboss.DataPreserve] = preserve
 		}
-		return r.Config.Core.Responder.Respond(w, req, http.StatusOK, PageRegister, data)
+		return i.origWriter.Config.Core.Responder.Respond(w, req, http.StatusOK, PageRegister, data)
 	case err != nil:
 		return err
 	}
 
+	//start
+	authboss.PutSession(w, authboss.SessionKey, pid)
+	//end
 	req = req.WithContext(context.WithValue(req.Context(), authboss.CTXKeyUser, user))
-	handled, err := r.Events.FireAfter(authboss.EventRegister, w, req)
-	if err != nil {
-		return err
-	} else if handled {
-		return nil
+
+	roCus := authboss.RedirectOptions{
+		Code:         http.StatusTemporaryRedirect,
+		Success:      "Account successfully created, you are now logged in",
+		RedirectPath: i.origWriter.Config.Paths.RegisterOK,
+		//start
+		UserEmail: pid,
+		//end
 	}
+
+	handled, err := i.origWriter.Events.FireAfterCustom(authboss.EventRegister, w, req, roCus)
+	if err != nil {
+                return err
+        } else if handled {
+                return nil
+        }
+
 
 	// Log the user in, but only if the response wasn't handled previously
 	// by a module like confirm.
 	authboss.PutSession(w, authboss.SessionKey, pid)
 
+
 	logger.Infof("registered and logged in user %s", pid)
 	ro := authboss.RedirectOptions{
 		Code:         http.StatusTemporaryRedirect,
 		Success:      "Account successfully created, you are now logged in",
-		RedirectPath: r.Config.Paths.RegisterOK,
+		RedirectPath: i.origWriter.Config.Paths.RegisterOK,
+		//start
+		UserEmail: pid,
+		//end
 	}
-	return r.Config.Core.Redirector.Redirect(w, req, ro)
-}
+	return i.origWriter.Config.Core.Redirector.Redirect(w, req, ro)
 
-// hasString checks to see if a sorted (ascending) array of
-// strings contains a string
-func hasString(arr []string, s string) bool {
-	index := sort.SearchStrings(arr, s)
-	if index < 0 || index >= len(arr) {
-		return false
-	}
-
-	return arr[index] == s
 }
