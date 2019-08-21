@@ -39,7 +39,6 @@ func (i *Interceptor) Init(ab *authboss.Authboss) (err error) {
 
 }
 
-
 func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 
 	logger := i.origWriter.RequestLogger(req)
@@ -89,10 +88,7 @@ func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 	user.PutPID(pid)
 	user.PutPassword(string(pass))
 	//start
-	//bb := req.Header.Get("X-Consumer-ID")
 	x_consumer_id := req.Header.Get("X-Consumer-ID")
-
-
 	user.PutCustomerToken(string(x_consumer_id))
 	//end
 
@@ -132,16 +128,14 @@ func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 
 	handled, err := i.origWriter.Events.FireAfterCustom(authboss.EventRegister, w, req, roCus)
 	if err != nil {
-                return err
-        } else if handled {
-                return nil
-        }
-
+		return err
+	} else if handled {
+		return nil
+	}
 
 	// Log the user in, but only if the response wasn't handled previously
 	// by a module like confirm.
 	authboss.PutSession(w, authboss.SessionKey, pid)
-
 
 	logger.Infof("registered and logged in user %s", pid)
 	ro := authboss.RedirectOptions{
