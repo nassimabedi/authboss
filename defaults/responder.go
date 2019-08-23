@@ -3,8 +3,16 @@ package defaults
 import (
 	"net/http"
 	"strings"
+	"time"
 
+	"fmt"
+	"html"
+
+	"github.com/dgrijalva/jwt-go"
 	"github.com/volatiletech/authboss"
+	//	"io/ioutil"
+	// "github.com/dgrijalva/jwt-go"
+	// abclientstate "github.com/volatiletech/authboss-clientstate"
 )
 
 // Responder helps respond to http requests
@@ -74,7 +82,77 @@ func (r *Redirector) Redirect(w http.ResponseWriter, req *http.Request, ro authb
 	return redirectFunction(w, req, ro)
 }
 
+type Auth struct {
+	*authboss.Authboss
+}
+
+func ExampleParse(myToken string, myKey string) {
+	token, err := jwt.Parse(myToken, func(token *jwt.Token) (interface{}, error) {
+		fmt.Println("--------------------->>>>>>>")
+		fmt.Println(token)
+		return []byte(myKey), nil
+	})
+
+	if err == nil && token.Valid {
+		fmt.Println("Your token is valid.  I like your style.")
+	} else {
+		fmt.Println("This token is terrible!  I cannot accept this.")
+	}
+}
+
 func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro authboss.RedirectOptions) error {
+
+	// =================== start ======================
+	cusToken := req.Header.Get("customer_token")
+	fmt.Printf("------------------------customerTokenConfirm:%s---->>>aaaaaaaaaa.......>>>>----------\n", cusToken)
+
+	c := r.Renderer.Load("login")
+
+	if user := req.Context().Value("user"); user != nil {
+
+		fmt.Println(".................I am Here correct :D :D............user.all:%s...............", user)
+	}
+
+	fmt.Printf("-------------------formvalueName:%s----------ro:%s------/n", r.FormValueName, c)
+	fmt.Printf("-------email1:%s-------------------", ro.UserEmail)
+
+	method := req.URL.Path
+
+	fmt.Printf("------------------------method:%s---->>>url:%s.......>>>>----------/n", req.Method, html.EscapeString(req.URL.Path))
+
+	var jwtKey = []byte("my_secret_key")
+
+	//
+	type Claims struct {
+		Username string `json:"username"`
+		jwt.StandardClaims
+	}
+
+	expirationTime := time.Now().Add(5 * time.Minute)
+	// Create the JWT claims, which includes the username and expiry time
+	claims := &Claims{
+		Username: ro.UserEmail,
+		StandardClaims: jwt.StandardClaims{
+			// In JWT, the expiry time is expressed as unix milliseconds
+			ExpiresAt: expirationTime.Unix(),
+		},
+	}
+
+	// Declare the token with the algorithm used for signing, and the claims
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	// Create the JWT string
+	tokenString, err := token.SignedString(jwtKey)
+	if err != nil {
+		// If there is an error in creating the JWT return an internal server error
+		w.WriteHeader(http.StatusInternalServerError)
+		return err
+	}
+
+	fmt.Printf("=========tokenString:%s==============/n", tokenString)
+	ExampleParse(tokenString, string(jwtKey))
+
+	// ====================== end ======================
+
 	path := ro.RedirectPath
 	redir := req.FormValue(r.FormValueName)
 	if len(redir) != 0 && ro.FollowRedirParam {
@@ -95,6 +173,45 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 		"location": path,
 	}
 
+	//start
+	if method == "/register" {
+		fmt.Println("==================here===1111===:%s=============>>>>>>>>>",status)
+		fmt.Println(ro.FollowRedirParam)
+		fmt.Println(authboss.User.GetPID)
+		fmt.Println(ro.UserEmail)
+		fmt.Println(ro.RedirectPath)
+		fmt.Println(ro.Code)
+		fmt.Println(ro.FollowRedirParam)
+		fmt.Println(ro.Failure)
+		if ro.Code == 307 {
+			ro.Code = 200
+		}
+		// pid, ok := authboss.GetSession(req, authboss.SessionKey)
+		// fmt.Println(pid)
+		// fmt.Println(ok)
+
+	}
+
+	if method == "/login" || method == "/register" && status == "success" {
+		data["auth_token"] = tokenString
+		data["refresh_token"] = ""
+		data["username"] = ro.UserEmail
+		data["fullname"] = ""
+		data["email"] = ro.UserEmail
+		var myslice []string
+		data["roles"] = myslice
+		data["permissions"] = myslice
+		//if status == "307" && method == "/register" {
+                //    status = "200"
+		//}
+	}
+	if status == "307" && method == "/register" {
+	    fmt.Println("===============register status 307")
+            status = "200"
+        }
+
+	//end
+
 	data["status"] = status
 	if len(message) != 0 {
 		data["message"] = message
@@ -110,9 +227,13 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 	}
 
 	if ro.Code != 0 {
-		if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect) {
+		//TODO : delete 307
+		//if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect) {
+		if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect || ro.Code == 307) {
+
 			w.WriteHeader(http.StatusOK)
 		} else {
+			fmt.Println("===================================man ro.code hastam :%s====",ro.Code)
 			w.WriteHeader(ro.Code)
 		}
 	}

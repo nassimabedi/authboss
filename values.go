@@ -20,6 +20,9 @@ import (
 // to validate itself and return certain fields.
 type BodyReader interface {
 	Read(page string, r *http.Request) (Validator, error)
+	//start
+	// ReadCus(page string, r *http.Request) (Validator, error)
+	//end
 }
 
 // UserValuer allows us to pull out the PID and Password from the request.
@@ -28,6 +31,7 @@ type UserValuer interface {
 
 	GetPID() string
 	GetPassword() string
+	GetCustomerToken() string
 }
 
 // ConfirmValuer allows us to pull out the token from the request
@@ -35,6 +39,7 @@ type ConfirmValuer interface {
 	Validator
 
 	GetToken() string
+	GetCustomerToken() string
 }
 
 // RecoverStartValuer provides the PID entered by the user.

@@ -20,6 +20,10 @@ import (
 type User interface {
 	GetPID() (pid string)
 	PutPID(pid string)
+	//start
+	GetCustomerToken() (customer_token string)
+	PutCustomerToken(customer_token string)
+	//end
 }
 
 // AuthableUser is identified by a password
