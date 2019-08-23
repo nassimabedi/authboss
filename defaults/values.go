@@ -9,6 +9,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/volatiletech/authboss"
+
+	"fmt"
 )
 
 // FormValue types
@@ -22,14 +24,18 @@ const (
 	FormValueCode         = "code"
 	FormValueRecoveryCode = "recovery_code"
 	FormValuePhoneNumber  = "phone_number"
+	//start
+	FormValueCustomerToken = "customer_token"
+	//end
 )
 
 // UserValues from the login form
 type UserValues struct {
 	HTTPFormValidator
 
-	PID      string
-	Password string
+	PID           string
+	Password      string
+	CustomerToken string
 
 	Arbitrary map[string]string
 }
@@ -43,6 +49,14 @@ func (u UserValues) GetPID() string {
 func (u UserValues) GetPassword() string {
 	return u.Password
 }
+
+//start
+// GetPassword from the values
+func (u UserValues) GetCustomerToken() string {
+        return u.CustomerToken
+}
+
+//end
 
 // GetValues from the form.
 func (u UserValues) GetValues() map[string]string {
@@ -60,12 +74,22 @@ type ConfirmValues struct {
 	HTTPFormValidator
 
 	Token string
+	//start
+	CustomerToken string
+	//end
 }
 
 // GetToken from the confirm values
 func (c ConfirmValues) GetToken() string {
 	return c.Token
 }
+
+//start
+func (c ConfirmValues) GetCustomerToken() string {
+	return c.CustomerToken
+}
+
+//end
 
 // RecoverStartValues for recover_start page
 type RecoverStartValues struct {
@@ -211,6 +235,21 @@ func NewHTTPBodyReader(readJSON, useUsernameNotEmail bool) *HTTPBodyReader {
 
 // Read the form pages
 func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, error) {
+	//start
+	fmt.Println("--------------------------Read-----------------------------------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^----------------------:))))))))))")
+	aa := r.Header.Get("User-Agent")
+	fmt.Printf("----------user-agent:%s-----------\n", aa)
+	//bb := r.Header.Get("customer_token")
+	bb := r.Header.Get("X-Consumer-ID")
+	fmt.Printf("----------customer_token:%s-----------\n", bb)
+	method := r.URL.Path
+
+	if len(bb) == 0 {
+		//return nil, errors.Errorf("failed to set customer token in method : %s",method)
+		//return nil, errors.Wrap( new error,"failed to set customer token in header")
+		fmt.Printf("=========method:%s==========",method)
+	}
+	//end
 	var values map[string]string
 
 	if h.ReadJSON {
@@ -239,6 +278,8 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 		return ConfirmValues{
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules},
 			Token:             values[FormValueConfirm],
+			// CustomerToken:     values[FormValueCustomerToken],
+			CustomerToken: bb,
 		}, nil
 	case "login":
 		var pid string
@@ -252,6 +293,8 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},
 			PID:               pid,
 			Password:          values[FormValuePassword],
+			// CustomerToken:     values[FormValueCustomerToken],
+			CustomerToken:     bb,
 		}, nil
 	case "recover_start":
 		var pid string
@@ -318,7 +361,10 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},
 			PID:               pid,
 			Password:          values[FormValuePassword],
-			Arbitrary:         arbitrary,
+			//start
+			CustomerToken: bb,
+			//end
+			Arbitrary: arbitrary,
 		}, nil
 	default:
 		return nil, errors.Errorf("failed to parse unknown page's form: %s", page)
