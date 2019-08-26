@@ -2,6 +2,7 @@ package defaults
 
 import (
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -63,6 +64,10 @@ type Redirector struct {
 	// CoerceRedirectTo200 forces http.StatusTemporaryRedirect and
 	// and http.StatusPermanentRedirect to http.StatusOK
 	CorceRedirectTo200 bool
+
+	//start
+	RenderCus authboss.Authboss
+	//end
 }
 
 // NewRedirector constructor
@@ -103,8 +108,27 @@ func ExampleParse(myToken string, myKey string) {
 func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro authboss.RedirectOptions) error {
 
 	// =================== start ======================
-	cusToken := req.Header.Get("customer_token")
-	fmt.Printf("------------------------customerTokenConfirm:%s---->>>aaaaaaaaaa.......>>>>----------\n", cusToken)
+	cusToken := req.Header.Get("X-Consumer-ID")
+	fmt.Printf("------------------------redirectAPI:%s---->>>aaaaaaaaaa.......>>>>----------\n", cusToken)
+	// a := UserValues.GetPID()
+	// fmt.Println(a)
+	// a := authboss.Authboss.user.GetPID()
+	// fmt.Println(a)
+
+	// storer_ := authboss.CreatingServerStorerCustom(*authboss.Authboss)
+	// storer_ := authboss.CreatingServerStorerCustom()
+	// authboss.EnsureCanCreateCus(r.RenderCus)
+	// a.Authboss.Storage.Server.Load
+	// Auth.CurrentUser(*authboss.Authboss, req)
+
+	// Auth.CurrentUser(req)
+	// authboss.EnsureCanCreate(authboss.Authboss)
+	// authboss.ServerStorerCustom
+	// authboss.CreatingServerStorerCustom
+	// r.Authboss.*Config.Storage.Server
+	// Auth.Authboss.Config.Storage.Server
+	// b := authboss.CreatingServerStorerCustom(*authboss.Authboss)
+	// storer_.displayUserInfo(ro.UserEmail, cusToken)
 
 	c := r.Renderer.Load("login")
 
@@ -175,7 +199,8 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 
 	//start
 	if method == "/register" {
-		fmt.Println("==================here===1111===:%s=============>>>>>>>>>",status)
+
+		fmt.Println("==================here===1111===:%s=============>>>>>>>>>", status)
 		fmt.Println(ro.FollowRedirParam)
 		fmt.Println(authboss.User.GetPID)
 		fmt.Println(ro.UserEmail)
@@ -193,22 +218,102 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 	}
 
 	if method == "/login" || method == "/register" && status == "success" {
-		data["auth_token"] = tokenString
-		data["refresh_token"] = ""
-		data["username"] = ro.UserEmail
-		data["fullname"] = ""
-		data["email"] = ro.UserEmail
-		var myslice []string
-		data["roles"] = myslice
-		data["permissions"] = myslice
+		data["access_token"] = tokenString
+		fmt.Println("---------------------------------------------------------------->>>>>>>")
+		// aa := reflect.Indirect(v).FieldByName("Firstname")
+		// fmt.Println(reflect.Indirect(v).FieldByName("Firstname"))
+		// fmt.Println(reflect.TypeOf(string(aa))
+		// fmt.Println(aa.String())
+		// fmt.Println(reflect.TypeOf(aa.String()))
+
+		//TODO: error handling
+		userInfo, err := r.RenderCus.CurrentUser(req)
+		fmt.Println(err)
+		fmt.Println(userInfo)
+		fmt.Println(userInfo.GetPID)
+		t := reflect.TypeOf(userInfo)
+		fmt.Println(t)
+		v := reflect.ValueOf(userInfo)
+		fmt.Println(v)
+		userType := reflect.Indirect(v).FieldByName("Type")
+		email := reflect.Indirect(v).FieldByName("Email")
+		firstname := reflect.Indirect(v).FieldByName("Firstname")
+		lastname := reflect.Indirect(v).FieldByName("Lastname")
+
+		nationalCode := reflect.Indirect(v).FieldByName("NationalCode")
+		birthday := reflect.Indirect(v).FieldByName("Birthday")
+		tenantEmail := reflect.Indirect(v).FieldByName("TenantEmail")
+		tenantConfirmURL := reflect.Indirect(v).FieldByName("TenantConfirmURL")
+		customFields := reflect.Indirect(v).FieldByName("CustomeFields")
+		role := reflect.Indirect(v).FieldByName("Role")
+		mobile := reflect.Indirect(v).FieldByName("Mobile")
+		mobileSeed := reflect.Indirect(v).FieldByName("MobileSeed")
+
+		fmt.Println("-----------------------------------------------^^^^^^^^^^^^^^^^^^^^^----------------------------------")
+		fmt.Println(firstname)
+		fmt.Println(reflect.Indirect(v).FieldByName("Lastname"))
+		fmt.Println(reflect.Indirect(v).FieldByName("Type"))
+		fmt.Println(reflect.Indirect(v).FieldByName("NationalCode"))
+		fmt.Println(reflect.Indirect(v).FieldByName("Birthday"))
+		fmt.Println(reflect.Indirect(v).FieldByName("TenantEmail"))
+		fmt.Println(reflect.Indirect(v).FieldByName("TenantConfirmURL"))
+		fmt.Println(reflect.Indirect(v).FieldByName("CustomeFields"))
+		fmt.Println(reflect.Indirect(v).FieldByName("Role"))
+
+		data["type"] = userType.String()
+		data["email"] = email.String()
+		data["tenant_email"] = tenantEmail.String()
+		data["tenant_confirm_url"] = tenantConfirmURL.String()
+
+		data["mobile"] = mobile.String()
+		data["mobile_seed"] = mobileSeed.String()
+		data["firstname"] = firstname.String()
+		data["lastname"] = lastname.String()
+		data["national_code"] = nationalCode.String()
+		data["birthday"] = birthday.String()
+		data["role"] = role.String()
+		data["custome_fields"] = customFields.String()
+
+		// fmt.Println(reflect.Indirect(v).FieldByName("Lastname"))
+		// fmt.Println(reflect.Indirect(v).FieldByName("Type"))
+		// fmt.Println(reflect.Indirect(v).FieldByName("NationalCode"))
+		// fmt.Println(reflect.Indirect(v).FieldByName("Birthday"))
+		// fmt.Println(reflect.Indirect(v).FieldByName("TenantEmail"))
+		// fmt.Println(reflect.Indirect(v).FieldByName("TenantConfirmURL"))
+		// fmt.Println(reflect.Indirect(v).FieldByName("CustomeFields"))
+		// fmt.Println(reflect.Indirect(v).FieldByName("Role"))
+
+		// data["refresh_token"] = ""
+		// data["username"] = ro.UserEmail
+		// data["fullname"] = ""
+		// data["email"] = ro.UserEmail
+		// var myslice []string
+		// data["roles"] = myslice
+		// data["permissions"] = myslice
+		// data["email"] =
+
+		// 	"email":"myemail@mail.com",// required when type is "email"
+		// "tenant_email": "info@tenant.com" // required when type is "email"
+		// "tenant_confirm_url":"tenant.com/tenant" //required
+		// "mobile":"09111087815", // required when type is "mobile"
+		// "mobile_seed":"+98",
+		// "firstname":"firstname",
+		// "lastname":"lastname",
+		// "national_code":"12907652",
+		// "birthday":"1990-04-05",
+		// "roles": [],
+		// "custome_fields":[{"phone":"887219031":"address":"Tehran"}]
+		// "oauth2_provider":"",
+		// "oauth2_user_info":[]
+
 		//if status == "307" && method == "/register" {
-                //    status = "200"
+		//    status = "200"
 		//}
 	}
 	if status == "307" && method == "/register" {
-	    fmt.Println("===============register status 307")
-            status = "200"
-        }
+		fmt.Println("===============register status 307")
+		status = "200"
+	}
 
 	//end
 
@@ -233,7 +338,7 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 
 			w.WriteHeader(http.StatusOK)
 		} else {
-			fmt.Println("===================================man ro.code hastam :%s====",ro.Code)
+			fmt.Println("===================================man ro.code hastam :%s====", ro.Code)
 			w.WriteHeader(ro.Code)
 		}
 	}

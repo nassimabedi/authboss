@@ -2,6 +2,7 @@ package register
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sort"
 
@@ -40,7 +41,7 @@ func (i *Interceptor) Init(ab *authboss.Authboss) (err error) {
 }
 
 func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
-
+	fmt.Println("----------------------override register POST ----------------------------")
 	logger := i.origWriter.RequestLogger(req)
 	validatable, err := i.origWriter.Core.BodyReader.Read(PageRegister, req)
 	if err != nil {
@@ -96,6 +97,9 @@ func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 		arbUser.PutArbitrary(arbitrary)
 	}
 
+	//TODO : 1.check type 2. check tenatnt_email and url 3.
+	// errs = []error{errors.New("user already exists")}
+
 	err = storer.Create(req.Context(), user)
 	switch {
 	case err == authboss.ErrUserFound:
@@ -125,7 +129,7 @@ func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 		UserEmail: pid,
 		//end
 	}
-
+	//TODO: confirm by SMS if type mobile or It is better to handle it in SendConfirmEmail func :D
 	handled, err := i.origWriter.Events.FireAfterCustom(authboss.EventRegister, w, req, roCus)
 	if err != nil {
 		return err

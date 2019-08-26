@@ -13,8 +13,18 @@ import (
 )
 
 var (
-	flagTestSMTPMailer = flag.Bool("test-smtp-mailer", false, "Test the smtp mailer")
+	flagTestSMTPMailer = flag.Bool("test-smtp-mailer", true, "Test the smtp mailer")
 )
+
+type unencryptedAuth struct {
+	smtp.Auth
+}
+
+func (a unencryptedAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+	s := *server
+	s.TLS = true
+	return a.Auth.Start(&s)
+}
 
 func TestSMTPMailer(t *testing.T) {
 	t.Parallel()
@@ -40,7 +50,17 @@ func TestSMTPMailer(t *testing.T) {
 	}
 
 	server := fmt.Sprintf("%s:%d", creds.Server, creds.Port)
-	mailer := NewSMTPMailer(server, smtp.PlainAuth("", creds.Email, creds.Password, creds.Server))
+	auth := unencryptedAuth{
+		smtp.PlainAuth(
+			"",
+			"confirm@manam.ir",
+			"Conf1010",
+			"smtp.manam.ir",
+		),
+	}
+
+	mailer := NewSMTPMailer(server, auth)
+	// mailer := NewSMTPMailer(server, smtp.PlainAuth("", creds.Email, creds.Password, creds.Server))
 
 	mail := authboss.Email{
 		From:    creds.Email,

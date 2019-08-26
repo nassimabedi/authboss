@@ -47,6 +47,10 @@ type ConfirmableUser interface {
 	PutConfirmed(confirmed bool)
 	PutConfirmSelector(selector string)
 	PutConfirmVerifier(verifier string)
+	//start
+	GetArbitrary() (arbitrary map[string]string)
+	PutArbitrary(arbitrary map[string]string)
+	//end
 }
 
 // LockableUser is a user that can be locked

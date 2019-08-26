@@ -181,6 +181,10 @@ type Config struct {
 		// database for user operations.
 		Server ServerStorer
 
+		//start
+		ServerCustom ServerStorerCustom
+		//end
+
 		// CookieState must be defined to provide an interface capapable of
 		// storing cookies for the given response, and reading them from the
 		// request.

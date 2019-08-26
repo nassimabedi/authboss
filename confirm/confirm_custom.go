@@ -7,11 +7,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/smtp"
 	"net/url"
 	"path"
 
 	"github.com/pkg/errors"
 	"github.com/volatiletech/authboss"
+	"github.com/volatiletech/authboss/defaults"
 )
 
 func init() {
@@ -47,7 +49,9 @@ func (i *ConfirmInterceptor) Init(ab *authboss.Authboss) (err error) {
 	case http.MethodPost:
 		callbackMethod = i.origWriter.Config.Core.Router.Post
 	}
-	callbackMethod("/confirm", i.origWriter.Config.Core.ErrorHandler.Wrap(i.Get))
+	callbackMethod("/confirm_email", i.origWriter.Config.Core.ErrorHandler.Wrap(i.Get))
+
+	callbackMethod("/confirm_sms", i.origWriter.Config.Core.ErrorHandler.Wrap(i.ConfirmSMS))
 
 	// i.origWriter.Events.Before(authboss.EventAuth, i.ConfirmCus.PreventAuth)
 	i.origWriter.Events.After(authboss.EventRegister, i.StartConfirmationWeb)
@@ -55,6 +59,13 @@ func (i *ConfirmInterceptor) Init(ab *authboss.Authboss) (err error) {
 	i.origWriter.Events.AfterCuss(authboss.EventRegister, i.StartConfirmationWebCus)
 	// end
 
+	return nil
+
+}
+
+func (i *ConfirmInterceptor) ConfirmSMS(w http.ResponseWriter, r *http.Request) error {
+	logger := i.origWriter.RequestLogger(r)
+	logger.Infof("=========================ConfirmSMS================================== ")
 	return nil
 
 }
@@ -131,7 +142,7 @@ func (i *ConfirmInterceptor) Get(w http.ResponseWriter, r *http.Request) error {
 	user.PutConfirmed(true)
 
 	logger.Infof("user %s confirmed their account", user.GetPID())
-	if err = i.origWriter.Config.Storage.Server.Save(r.Context(), user); err != nil {
+	if err = i.origWriter.Config.Storage.ServerCustom.Save(r.Context(), user); err != nil {
 		return err
 	}
 
@@ -227,6 +238,11 @@ func (i *ConfirmInterceptor) StartConfirmation(ctx context.Context, user authbos
 	user.PutConfirmed(false)
 	user.PutConfirmSelector(selector)
 	user.PutConfirmVerifier(verifier)
+	arbitraryField := user.GetArbitrary()
+	fmt.Println(arbitraryField["firstname"])
+	fmt.Println(arbitraryField["tenant_email"])
+	fmt.Println(arbitraryField["tenant_confirm_url"])
+	fmt.Println(arbitraryField["type"])
 
 	logger.Infof("generated new confirm token for user: %s", user.GetPID())
 	if err := i.origWriter.Config.Storage.ServerCustom.Save(ctx, user); err != nil {
@@ -238,40 +254,64 @@ func (i *ConfirmInterceptor) StartConfirmation(ctx context.Context, user authbos
 	// goConfirmEmail(c, ctx, user.GetEmail(), token, user.GetCustomerToken())
 
 	logger.Infof(".............sssstart confirmation %s", customerToken)
-	goConfirmEmailCus(i, ctx, user.GetEmail(), token, customerToken)
+	goConfirmEmailCus(i, ctx, user.GetEmail(), token, customerToken, arbitraryField["type"], arbitraryField["tenant_email"], arbitraryField["tenant_confirm_url"])
 
 	return nil
 }
 
-var goConfirmEmailCus = func(i *ConfirmInterceptor, ctx context.Context, to, token string, customerToken string) {
-	go i.SendConfirmEmail(ctx, to, token, customerToken)
+var goConfirmEmailCus = func(i *ConfirmInterceptor, ctx context.Context, to, token string, customerToken string, user_type string, tenant_email string, tenant_confirm_url string) {
+	go i.SendConfirmEmail(ctx, to, token, customerToken, user_type, tenant_email, tenant_confirm_url)
 }
 
-func (i *ConfirmInterceptor) SendConfirmEmail(ctx context.Context, to, token string, customerToken string) {
+type unencryptedAuth struct {
+	smtp.Auth
+}
+
+func (a unencryptedAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+	s := *server
+	s.TLS = true
+	return a.Auth.Start(&s)
+}
+
+func (i *ConfirmInterceptor) SendConfirmEmail(ctx context.Context, to, token string, customerToken string, user_type string, tenant_email string, tenant_confirm_url string) {
 	logger := i.origWriter.Logger(ctx)
 	logger.Infof(".............SendConfirmEmail %s", customerToken)
-	mailURL := i.mailURL(token, customerToken)
+	logger.Infof("--------------token: %s", token)
+	emailBody := creatEmailBody(token, tenant_confirm_url)
 
-	email := authboss.Email{
-		To:       []string{to},
-		From:     i.origWriter.Config.Mail.From,
-		FromName: i.origWriter.Config.Mail.FromName,
-		Subject:  i.origWriter.Config.Mail.SubjectPrefix + "Confirm New Account",
+	//TODO : 1.delete customerToken 2. added send sms
+	if len(tenant_email) > 0 && user_type == "email" {
+		i.sendEmailByConsumer(ctx, to, token, customerToken, tenant_email, emailBody)
+	} else if len(tenant_email) == 0 && user_type == "email" {
+		i.sendEmailByManam(to, customerToken, emailBody)
 	}
 
-	logger.Infof("sssssending confirm e-mail to: %s", to)
-	logger.Infof("-----------------DataConfirmURL........%s ", DataConfirmURL)
+	// email := authboss.Email{
+	// 	To:       []string{to},
+	// 	From:     i.origWriter.Config.Mail.From,
+	// 	FromName: i.origWriter.Config.Mail.FromName,
+	// 	Subject:  i.origWriter.Config.Mail.SubjectPrefix + "Confirm New Account",
+	// }
 
-	ro := authboss.EmailResponseOptions{
-		Data:         authboss.NewHTMLData(DataConfirmURL, mailURL),
-		HTMLTemplate: EmailConfirmHTML,
-		TextTemplate: EmailConfirmTxt,
-	}
+	// mailURL := i.mailURL(token, customerToken)
+	// logger.Infof(".............mailURL:  %s", mailURL)
 
-	// Here is sending email
-	if err := i.origWriter.Email(ctx, email, ro); err != nil {
-		logger.Errorf("failed to send confirm e-mail to %s: %+v", to, err)
-	}
+	// logger.Infof("sssssending confirm e-mail to: %s", to)
+	// logger.Infof("-----------------DataConfirmURL........%s ", DataConfirmURL)
+
+	// ro := authboss.EmailResponseOptions{
+	// 	Data:         authboss.NewHTMLData(DataConfirmURL, mailURL),
+	// 	HTMLTemplate: EmailConfirmHTML,
+	// 	TextTemplate: EmailConfirmTxt,
+	// }
+
+	// // Here is sending email
+	// if err := i.origWriter.Email(ctx, email, ro); err != nil {
+	// 	logger.Infof("-----------------------Error sending email ---------------------------------")
+	// 	logger.Errorf("failed to send confirm e-mail to %s: %+v", to, err)
+	// }
+
+	// //end
 }
 
 func (i *ConfirmInterceptor) mailURL(token string, customerToken string) string {
@@ -299,3 +339,92 @@ func (i *ConfirmInterceptor) mailURL(token string, customerToken string) string 
 	//return fmt.Sprintf("%s%s?%s&%s", c.Config.Paths.RootURL, p, query.Encode(), queryCusToken.Encode())
 	return fmt.Sprintf("%s%s?%s", i.origWriter.Config.Paths.RootURL, p, query.Encode())
 }
+
+//start
+
+func (i *ConfirmInterceptor) sendEmailByConsumer(ctx context.Context, to, token string, customerToken string, tenant_email string, emailBody string) error {
+	mailURL := i.mailURL(token, customerToken)
+
+	fmt.Println(".............mailURL:  %s", mailURL)
+
+	email := authboss.Email{
+		To: []string{to},
+		// From:     i.origWriter.Config.Mail.From,
+		From:     tenant_email,
+		FromName: i.origWriter.Config.Mail.FromName,
+		Subject:  i.origWriter.Config.Mail.SubjectPrefix + "Confirm New Account",
+	}
+
+	fmt.Println("sssssending confirm e-mail to: %s", to)
+	fmt.Println("-----------------DataConfirmURL........%s ", DataConfirmURL)
+
+	//TODO: create body
+	fmt.Println(emailBody)
+	ro := authboss.EmailResponseOptions{
+		Data:         authboss.NewHTMLData(DataConfirmURL, mailURL),
+		HTMLTemplate: EmailConfirmHTML,
+		TextTemplate: EmailConfirmTxt,
+	}
+
+	// Here is sending email
+	if err := i.origWriter.Email(ctx, email, ro); err != nil {
+		fmt.Println("-----------------------Error sending email ---------------------------------")
+		fmt.Println("failed to send confirm e-mail to %s: %+v", to, err)
+		return err
+	}
+	return nil
+
+}
+
+func (i *ConfirmInterceptor) sendEmailByManam(to, customerToken string, emailBody string) error {
+
+	server := fmt.Sprintf("%s:%d", "smtp.manam.ir", 587)
+	auth := unencryptedAuth{
+		smtp.PlainAuth(
+			"",
+			"confirm@manam.ir",
+			"Conf1010",
+			"smtp.manam.ir",
+		),
+	}
+
+	mailer := defaults.NewSMTPMailer(server, auth)
+
+	mail := authboss.Email{
+		// From:    creds.Email,
+		// To:      []string{creds.Email},
+
+		// From:    "confirm@manam.ir", //i.origWriter.Config.Mail.From
+		// To:      []string{"nassimabedi@gmail.com"},
+		// Subject: "Authboss Test SMTP Mailer1111", //i.origWriter.Config.Mail.SubjectPrefix + "Confirm New Account"
+
+		From:    i.origWriter.Config.Mail.From,
+		To:      []string{to},
+		Subject: i.origWriter.Config.Mail.SubjectPrefix + "Confirm New Account",
+	}
+
+	txtOnly := mail
+	// txtOnly.Subject += ": Text Content"
+	txtOnly.Subject += i.origWriter.Config.Mail.SubjectPrefix + "Confirm New Account"
+	// txtOnly.TextBody = "Authboss\nSMTP\nTest\nWith\nNewlines"
+	txtOnly.TextBody = emailBody
+
+	if err_ := mailer.Send(context.Background(), txtOnly); err_ != nil {
+		//t.Error(err)
+		fmt.Println("---------------------error for sending email-----------------------")
+		fmt.Println(err_)
+	}
+
+	return nil
+
+}
+
+func creatEmailBody(token string, tenant_confirm_url string) string {
+	// Please copy and paste the following link into your browser to confirm your account\n\nhttp://localhost:3000/auth/confirm?cnf=x5kaCnV_G-b43oXlm3OJ98QBhWuBvwpEFvJ6WJWBWq8ssj13wrHATssafmQl-sadRNmvfnFVH9PT-www8Od1bg%3D%3D&amp;customer_token=kiss_customerooooosdsd4
+	htmlbody := "Hi <br>"
+	htmlbody += "Please copy and paste the following link into your browser to confirm your account\n\n"
+	htmlbody += tenant_confirm_url + "?cnf=" + token
+	return htmlbody
+}
+
+//end
