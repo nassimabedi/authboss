@@ -54,7 +54,8 @@ func (i *AuthInterceptor) LoginPost(w http.ResponseWriter, r *http.Request) erro
 	fmt.Println("=====================pid:%s=======cus_token:%s=================", pid, customerToken)
 	//end
 
-	pidUser, err := i.origWriter.Storage.ServerCustom.Load(r.Context(), pid, customerToken)
+	//TODO: find type
+	pidUser, err := i.origWriter.Storage.ServerCustom.Load(r.Context(), pid, customerToken,"email")
 	//pidUser, err := a.Authboss.Storage.Server.Load(r.Context(), pid)
 	if err == authboss.ErrUserNotFound {
 		logger.Infof("failed to load user requested by pid: %s", pid)

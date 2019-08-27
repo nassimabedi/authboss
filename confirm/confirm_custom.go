@@ -254,13 +254,13 @@ func (i *ConfirmInterceptor) StartConfirmation(ctx context.Context, user authbos
 	// goConfirmEmail(c, ctx, user.GetEmail(), token, user.GetCustomerToken())
 
 	logger.Infof(".............sssstart confirmation %s", customerToken)
-	goConfirmEmailCus(i, ctx, user.GetEmail(), token, customerToken, arbitraryField["type"], arbitraryField["tenant_email"], arbitraryField["tenant_confirm_url"])
+	goConfirmEmailCus(i, ctx, user.GetEmail(), token, customerToken, arbitraryField["type"], arbitraryField["tenant_email"], arbitraryField["tenant_confirm_url"], arbitraryField["mobile"])
 
 	return nil
 }
 
-var goConfirmEmailCus = func(i *ConfirmInterceptor, ctx context.Context, to, token string, customerToken string, user_type string, tenant_email string, tenant_confirm_url string) {
-	go i.SendConfirmEmail(ctx, to, token, customerToken, user_type, tenant_email, tenant_confirm_url)
+var goConfirmEmailCus = func(i *ConfirmInterceptor, ctx context.Context, to, token string, customerToken string, user_type string, tenant_email string, tenant_confirm_url string, mobile string) {
+	go i.SendConfirmEmail(ctx, to, token, customerToken, user_type, tenant_email, tenant_confirm_url, mobile)
 }
 
 type unencryptedAuth struct {
@@ -273,7 +273,7 @@ func (a unencryptedAuth) Start(server *smtp.ServerInfo) (string, []byte, error) 
 	return a.Auth.Start(&s)
 }
 
-func (i *ConfirmInterceptor) SendConfirmEmail(ctx context.Context, to, token string, customerToken string, user_type string, tenant_email string, tenant_confirm_url string) {
+func (i *ConfirmInterceptor) SendConfirmEmail(ctx context.Context, to, token string, customerToken string, user_type string, tenant_email string, tenant_confirm_url string, mobile string) {
 	logger := i.origWriter.Logger(ctx)
 	logger.Infof(".............SendConfirmEmail %s", customerToken)
 	logger.Infof("--------------token: %s", token)
@@ -281,9 +281,12 @@ func (i *ConfirmInterceptor) SendConfirmEmail(ctx context.Context, to, token str
 
 	//TODO : 1.delete customerToken 2. added send sms
 	if len(tenant_email) > 0 && user_type == "email" {
+		//if len(tenant_email) > 0  {
 		i.sendEmailByConsumer(ctx, to, token, customerToken, tenant_email, emailBody)
 	} else if len(tenant_email) == 0 && user_type == "email" {
 		i.sendEmailByManam(to, customerToken, emailBody)
+	} else if user_type == "mobile" {
+		i.sendSMSByManam(mobile, customerToken, emailBody)
 	}
 
 	// email := authboss.Email{
@@ -414,6 +417,16 @@ func (i *ConfirmInterceptor) sendEmailByManam(to, customerToken string, emailBod
 		fmt.Println("---------------------error for sending email-----------------------")
 		fmt.Println(err_)
 	}
+
+	return nil
+
+}
+
+func (i *ConfirmInterceptor) sendSMSByManam(mobile, customerToken string, body string) error {
+
+	fmt.Println("-------------------------------send SMS By Manam---------------------")
+	fmt.Println("------------------------------- mobile : %s ---------------------", mobile)
+	fmt.Println("------------------------------- body: %s ---------------------", body)
 
 	return nil
 

@@ -15,7 +15,8 @@ type ConfirmingServerStorerCustom interface {
 type ServerStorerCustom interface {
 	// Load will look up the user based on the passed the PrimaryID
 	//start
-	Load(ctx context.Context, key string, customerToken string) (User, error)
+	// Load(ctx context.Context, key string, customerToken string) (User, error)
+	Load(ctx context.Context, key string, customerToken string, userType string) (User, error)
 	//Load(ctx context.Context, key string) (User, error)
 	//end
 
