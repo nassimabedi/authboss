@@ -74,6 +74,7 @@ type InterceptorStorage struct {
 	ConfirmingServerStorerCustom ConfirmingServerStorer
 	ServerStorerCustom           ServerStorer
 	CreatingServerStorerCustom   CreatingServerStorer
+	RecoveringServerStorerCustom RecoveringServerStorer
 	// CreatingServerViewUserStorerCustom CreatingServerViewUserStorerCustom
 	// overridden bool
 }
@@ -89,6 +90,15 @@ func EnsureCanConfirmCus(storer ServerStorerCustom) ConfirmingServerStorerCustom
 
 func EnsureCanCreateCus(storer ServerStorerCustom) CreatingServerStorerCustom {
 	s, ok := storer.(CreatingServerStorerCustom)
+	if !ok {
+		panic("could not upgrade ServerStorer to CreatingServerStorer, check your struct")
+	}
+
+	return s
+}
+
+func EnsureCanRecoverCus(storer ServerStorerCustom) RecoveringServerStorerCustom {
+	s, ok := storer.(RecoveringServerStorerCustom)
 	if !ok {
 		panic("could not upgrade ServerStorer to CreatingServerStorer, check your struct")
 	}

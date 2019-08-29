@@ -42,6 +42,7 @@ type UserValues struct {
 
 // GetPID from the values
 func (u UserValues) GetPID() string {
+	fmt.Println("-------------------Get PID authboss-----------------------")
 	return u.PID
 }
 
@@ -53,7 +54,7 @@ func (u UserValues) GetPassword() string {
 //start
 // GetPassword from the values
 func (u UserValues) GetCustomerToken() string {
-        return u.CustomerToken
+	return u.CustomerToken
 }
 
 //end
@@ -247,7 +248,7 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 	if len(bb) == 0 {
 		//return nil, errors.Errorf("failed to set customer token in method : %s",method)
 		//return nil, errors.Wrap( new error,"failed to set customer token in header")
-		fmt.Printf("=========method:%s==========",method)
+		fmt.Printf("=========method:%s==========", method)
 	}
 	//end
 	var values map[string]string
@@ -294,9 +295,11 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 			PID:               pid,
 			Password:          values[FormValuePassword],
 			// CustomerToken:     values[FormValueCustomerToken],
-			CustomerToken:     bb,
+			CustomerToken: bb,
 		}, nil
 	case "recover_start":
+		fmt.Println("--------------------recover start--------------------------")
+		fmt.Println(values)
 		var pid string
 		if h.UseUsername {
 			pid = values[FormValueUsername]

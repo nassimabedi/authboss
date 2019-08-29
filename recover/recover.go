@@ -62,7 +62,7 @@ func (r *Recover) Init(ab *authboss.Authboss) (err error) {
 	}
 
 	r.Authboss.Config.Core.Router.Get("/recover", r.Core.ErrorHandler.Wrap(r.StartGet))
-	r.Authboss.Config.Core.Router.Post("/recover", r.Core.ErrorHandler.Wrap(r.StartPost))
+	// r.Authboss.Config.Core.Router.Post("/recover", r.Core.ErrorHandler.Wrap(r.StartPost))
 	r.Authboss.Config.Core.Router.Get("/recover/end", r.Core.ErrorHandler.Wrap(r.EndGet))
 	r.Authboss.Config.Core.Router.Post("/recover/end", r.Core.ErrorHandler.Wrap(r.EndPost))
 
@@ -216,7 +216,8 @@ func (r *Recover) EndPost(w http.ResponseWriter, req *http.Request) error {
 	verifierBytes := sha512.Sum512(rawToken[recoverTokenSplit:])
 	selector := base64.StdEncoding.EncodeToString(selectorBytes[:])
 
-	storer := authboss.EnsureCanRecover(r.Authboss.Config.Storage.Server)
+	// storer := authboss.EnsureCanRecover(r.Authboss.Config.Storage.Server)
+	storer := authboss.EnsureCanRecoverCus(r.Authboss.Config.Storage.ServerCustom)
 	user, err := storer.LoadByRecoverSelector(req.Context(), selector)
 	if err == authboss.ErrUserNotFound {
 		logger.Info("invalid recover token submitted, user not found")
