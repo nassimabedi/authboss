@@ -26,6 +26,8 @@ const (
 	FormValuePhoneNumber  = "phone_number"
 	//start
 	FormValueCustomerToken = "customer_token"
+	FormValueUserType      = "type"
+	FormValueMobile        = "mobile"
 	//end
 )
 
@@ -97,11 +99,18 @@ type RecoverStartValues struct {
 	HTTPFormValidator
 
 	PID string
+	//start
+	UserType string
+	//end
 }
 
 // GetPID for recovery
 func (r RecoverStartValues) GetPID() string { return r.PID }
 
+//start
+func (r RecoverStartValues) GetUserType() string { return r.UserType }
+
+//end
 // RecoverMiddleValues for recover_middle page
 type RecoverMiddleValues struct {
 	HTTPFormValidator
@@ -118,6 +127,9 @@ type RecoverEndValues struct {
 
 	Token       string
 	NewPassword string
+	//start
+	UserType string
+	//end
 }
 
 // GetToken for recovery
@@ -125,6 +137,11 @@ func (r RecoverEndValues) GetToken() string { return r.Token }
 
 // GetPassword for recovery
 func (r RecoverEndValues) GetPassword() string { return r.NewPassword }
+
+//start
+func (r RecoverEndValues) GetUserType() string { return r.UserType }
+
+//end
 
 // TwoFA for totp2fa_validate page
 type TwoFA struct {
@@ -186,6 +203,9 @@ type HTTPBodyReader struct {
 func NewHTTPBodyReader(readJSON, useUsernameNotEmail bool) *HTTPBodyReader {
 	var pid string
 	var pidRules Rules
+	//start
+	var typeRules Rules
+	//end
 
 	if useUsernameNotEmail {
 		pid = "username"
@@ -203,6 +223,11 @@ func NewHTTPBodyReader(readJSON, useUsernameNotEmail bool) *HTTPBodyReader {
 		}
 	}
 
+	typeRules = Rules{
+		FieldName: "type", Required: true,
+		MustMatch: regexp.MustCompile(`email|mobile`),
+	}
+
 	passwordRule := Rules{
 		FieldName:  "password",
 		MinLength:  8,
@@ -216,11 +241,15 @@ func NewHTTPBodyReader(readJSON, useUsernameNotEmail bool) *HTTPBodyReader {
 		UseUsername: useUsernameNotEmail,
 		ReadJSON:    readJSON,
 		Rulesets: map[string][]Rules{
-			"login":         {pidRules},
-			"register":      {pidRules, passwordRule},
-			"confirm":       {Rules{FieldName: FormValueConfirm, Required: true}},
-			"recover_start": {pidRules},
-			"recover_end":   {passwordRule},
+			// "login":         {pidRules},
+			// "register":      {pidRules, passwordRule},
+			"login":    {pidRules, typeRules},
+			"register": {pidRules, passwordRule, typeRules},
+			"confirm":  {Rules{FieldName: FormValueConfirm, Required: true}},
+			// "recover_start": {pidRules},
+			// "recover_end":   {passwordRule},
+			"recover_start": {pidRules, typeRules},
+			"recover_end":   {passwordRule, typeRules},
 
 			"twofactor_verify_end": {Rules{FieldName: FormValueToken, Required: true}},
 		},
@@ -307,9 +336,12 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 			pid = values[FormValueEmail]
 		}
 
+		userType := values[FormValueUserType]
+
 		return RecoverStartValues{
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},
 			PID:               pid,
+			UserType:          userType,
 		}, nil
 	case "recover_middle":
 		return RecoverMiddleValues{

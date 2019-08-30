@@ -64,19 +64,21 @@ func (r *Recover) Init(ab *authboss.Authboss) (err error) {
 	r.Authboss.Config.Core.Router.Get("/recover", r.Core.ErrorHandler.Wrap(r.StartGet))
 	// r.Authboss.Config.Core.Router.Post("/recover", r.Core.ErrorHandler.Wrap(r.StartPost))
 	r.Authboss.Config.Core.Router.Get("/recover/end", r.Core.ErrorHandler.Wrap(r.EndGet))
-	r.Authboss.Config.Core.Router.Post("/recover/end", r.Core.ErrorHandler.Wrap(r.EndPost))
+	// r.Authboss.Config.Core.Router.Post("/recover/end", r.Core.ErrorHandler.Wrap(r.EndPost))
 
 	return nil
 }
 
 // StartGet starts the recover procedure by rendering a form for the user.
 func (r *Recover) StartGet(w http.ResponseWriter, req *http.Request) error {
+	fmt.Println("------------------------StartGet-------------------------------")
 	return r.Authboss.Config.Core.Responder.Respond(w, req, http.StatusOK, PageRecoverStart, nil)
 }
 
 // StartPost starts the recover procedure using values provided from the user
 // usually from the StartGet's form.
 func (r *Recover) StartPost(w http.ResponseWriter, req *http.Request) error {
+	fmt.Println("------------------------StartPOST-------------------------------")
 	logger := r.RequestLogger(req)
 
 	validatable, err := r.Authboss.Core.BodyReader.Read(PageRecoverStart, req)
@@ -216,8 +218,7 @@ func (r *Recover) EndPost(w http.ResponseWriter, req *http.Request) error {
 	verifierBytes := sha512.Sum512(rawToken[recoverTokenSplit:])
 	selector := base64.StdEncoding.EncodeToString(selectorBytes[:])
 
-	// storer := authboss.EnsureCanRecover(r.Authboss.Config.Storage.Server)
-	storer := authboss.EnsureCanRecoverCus(r.Authboss.Config.Storage.ServerCustom)
+	storer := authboss.EnsureCanRecover(r.Authboss.Config.Storage.Server)
 	user, err := storer.LoadByRecoverSelector(req.Context(), selector)
 	if err == authboss.ErrUserNotFound {
 		logger.Info("invalid recover token submitted, user not found")

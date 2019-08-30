@@ -55,7 +55,7 @@ type RecoveringServerStorerCustom interface {
 	// LoadByRecoverSelector finds a user by his recover selector field
 	// and should return ErrUserNotFound if that user cannot be found.
 	// TODO: must add customerToken
-	LoadByRecoverSelector(ctx context.Context, selector string) (RecoverableUser, error)
+	LoadByRecoverSelector(ctx context.Context, selector string, customerToken string) (RecoverableUser, error)
 }
 
 type RememberingServerStorerCustom interface {

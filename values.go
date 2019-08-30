@@ -47,6 +47,9 @@ type RecoverStartValuer interface {
 	Validator
 
 	GetPID() string
+	//start
+	GetUserType() string
+	//end
 }
 
 // RecoverMiddleValuer provides the token that the user submitted
