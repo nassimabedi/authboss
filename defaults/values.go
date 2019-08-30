@@ -201,6 +201,7 @@ type HTTPBodyReader struct {
 // and fields for each page. If no defaults are required, simply construct
 // this using the struct members itself for more control.
 func NewHTTPBodyReader(readJSON, useUsernameNotEmail bool) *HTTPBodyReader {
+	fmt.Println("---------------------------NewHTTPBodyReader--------------------------------------")
 	var pid string
 	var pidRules Rules
 	//start
@@ -265,6 +266,7 @@ func NewHTTPBodyReader(readJSON, useUsernameNotEmail bool) *HTTPBodyReader {
 
 // Read the form pages
 func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, error) {
+	// authboss.Validator.Validate()
 	//start
 	fmt.Println("--------------------------Read-----------------------------------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^----------------------:))))))))))")
 	aa := r.Header.Get("User-Agent")
@@ -374,6 +376,7 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 			RecoveryCode:      values[FormValueRecoveryCode],
 		}, nil
 	case "register":
+		fmt.Println("-----------------------register case----------------------------------------")
 		arbitrary := make(map[string]string)
 
 		for k, v := range values {
@@ -391,6 +394,24 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 		} else {
 			pid = values[FormValueEmail]
 		}
+
+		//start
+		// if values[FormValueUserType] == "email" {
+		// 	fmt.Println("-----------------userType is email----------------->>>>>>>>..................")
+		// 	if len(values[FormValueEmail]) == 0 {
+		// 		return nil, errors.Errorf("Email must set")
+		// 	}
+		// } else if values[FormValueUserType] == "mobile" {
+		// 	if val, ok := values[FormValueMobile]; !ok {
+		// 		if len(val) == 0 {
+		// 			return nil, errors.Errorf("Mobile must set")
+		// 		}
+		// 		fmt.Println(val)
+		// 		fmt.Println(ok)
+		// 		//do something here
+		// 	}
+		// }
+		//end
 
 		return UserValues{
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},

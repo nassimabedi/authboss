@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"sort"
 
 	"fmt"
 
@@ -27,11 +28,23 @@ func (i *AuthInterceptor) Init(ab *authboss.Authboss) (err error) {
 	if err = i.origWriter.Config.Core.ViewRenderer.Load(PageLogin); err != nil {
 		return err
 	}
+	//start
+	// sort.Strings(ab.Config.Modules.LoginPreserveFields)
+	//end
 
 	// i.origWriter.Config.Core.Router.Get("/login", i.origWriter.Core.ErrorHandler.Wrap(a.LoginGet))
 	i.origWriter.Config.Core.Router.Post("/login", i.origWriter.Core.ErrorHandler.Wrap(i.LoginPost))
 
 	return nil
+}
+
+func hasString(arr []string, s string) bool {
+	index := sort.SearchStrings(arr, s)
+	if index < 0 || index >= len(arr) {
+		return false
+	}
+
+	return arr[index] == s
 }
 
 func (i *AuthInterceptor) LoginPost(w http.ResponseWriter, r *http.Request) error {
@@ -43,6 +56,57 @@ func (i *AuthInterceptor) LoginPost(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 
+	var arbitrary map[string]string
+	var preserve map[string]string
+	if arb, ok := validatable.(authboss.ArbitraryValuer); ok {
+		fmt.Println("----------------------get Aribiratray---------------------------------")
+		arbitrary = arb.GetValues()
+		preserve = make(map[string]string)
+
+		for k, v := range arbitrary {
+			if hasString(i.origWriter.Config.Modules.LoginPreserveFields, k) {
+				preserve[k] = v
+			}
+		}
+	}
+
+	fmt.Println(arbitrary)
+	fmt.Println(preserve)
+	fmt.Println("------------------>>>>>>...................................^^^^^^^^^^^^^^^^^^^^^^>>>>>>>>")
+	//start
+	if preserve["type"] == "email" {
+		fmt.Println("-----------------userType is email----------------->>>>>>>>..................")
+		if val, ok := preserve["email"]; !ok {
+			if len(val) == 0 {
+				w.WriteHeader(404)
+				w.Write([]byte(`Email is require`))
+			}
+			fmt.Println(val)
+			fmt.Println(ok)
+			return nil
+			//do something here
+		}
+
+	} else if preserve["type"] == "mobile" {
+		fmt.Println("-----------------userType is mobile----------------->>>>>>>>..................")
+		if val, ok := preserve["mobile"]; !ok {
+			if len(val) == 0 {
+				fmt.Println("-----------------mobile not set----------------->>>>>>>>..................")
+				w.WriteHeader(404)
+				w.Write([]byte(`Mobile is require`))
+			}
+			fmt.Println(val)
+			fmt.Println(ok)
+			return nil
+			//do something here
+		}
+	}
+
+	fmt.Println(arbitrary)
+	fmt.Println(preserve)
+	fmt.Println(preserve["type"])
+	fmt.Println("----------------------------------------->>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<")
+	//end
 	// Skip validation since all the validation happens during the database lookup and
 	// password check.
 	creds := authboss.MustHaveUserValues(validatable)
@@ -55,7 +119,7 @@ func (i *AuthInterceptor) LoginPost(w http.ResponseWriter, r *http.Request) erro
 	//end
 
 	//TODO: find type
-	pidUser, err := i.origWriter.Storage.ServerCustom.Load(r.Context(), pid, customerToken,"email")
+	pidUser, err := i.origWriter.Storage.ServerCustom.Load(r.Context(), pid, customerToken, "email")
 	//pidUser, err := a.Authboss.Storage.Server.Load(r.Context(), pid)
 	if err == authboss.ErrUserNotFound {
 		logger.Infof("failed to load user requested by pid: %s", pid)

@@ -61,6 +61,41 @@ func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 		}
 	}
 
+	//start
+	if preserve["type"] == "email" {
+		fmt.Println("-----------------userType is email----------------->>>>>>>>..................")
+		if val, ok := preserve["email"]; !ok {
+			if len(val) == 0 {
+				w.WriteHeader(404)
+				w.Write([]byte(`Email is require`))
+			}
+			fmt.Println(val)
+			fmt.Println(ok)
+			return nil
+			//do something here
+		}
+
+	} else if preserve["type"] == "mobile" {
+		fmt.Println("-----------------userType is mobile----------------->>>>>>>>..................")
+		if val, ok := preserve["mobile"]; !ok {
+			if len(val) == 0 {
+				fmt.Println("-----------------mobile not set----------------->>>>>>>>..................")
+				w.WriteHeader(404)
+				w.Write([]byte(`Mobile is require`))
+			}
+			fmt.Println(val)
+			fmt.Println(ok)
+			return nil
+			//do something here
+		}
+	}
+
+	fmt.Println(arbitrary)
+	fmt.Println(preserve)
+	fmt.Println(preserve["type"])
+	fmt.Println("----------------------------------------->>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<")
+	//end
+
 	errs := validatable.Validate()
 	if errs != nil {
 		logger.Info("registration validation failed")

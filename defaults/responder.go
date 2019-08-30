@@ -130,6 +130,11 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 	// b := authboss.CreatingServerStorerCustom(*authboss.Authboss)
 	// storer_.displayUserInfo(ro.UserEmail, cusToken)
 
+	// pidUser, err := r.RenderCus.Storage.ServerCustom.Load(req.Context(), ro.UserEmail, cusToken, "email")
+	// fmt.Println(pidUser)
+	// fmt.Println(err)
+	// Storage.ServerCustom.Load(r.Context(), pid, customerToken, "email")
+
 	c := r.Renderer.Load("login")
 
 	if user := req.Context().Value("user"); user != nil {
@@ -144,36 +149,36 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 
 	fmt.Printf("------------------------method:%s---->>>url:%s.......>>>>----------/n", req.Method, html.EscapeString(req.URL.Path))
 
-	var jwtKey = []byte("my_secret_key")
+	// var jwtKey = []byte("my_secret_key")
 
-	//
-	type Claims struct {
-		Username string `json:"username"`
-		jwt.StandardClaims
-	}
+	// //
+	// type Claims struct {
+	// 	Username string `json:"username"`
+	// 	jwt.StandardClaims
+	// }
 
-	expirationTime := time.Now().Add(5 * time.Minute)
-	// Create the JWT claims, which includes the username and expiry time
-	claims := &Claims{
-		Username: ro.UserEmail,
-		StandardClaims: jwt.StandardClaims{
-			// In JWT, the expiry time is expressed as unix milliseconds
-			ExpiresAt: expirationTime.Unix(),
-		},
-	}
+	// expirationTime := time.Now().Add(5 * time.Minute)
+	// // Create the JWT claims, which includes the username and expiry time
+	// claims := &Claims{
+	// 	Username: ro.UserEmail,
+	// 	StandardClaims: jwt.StandardClaims{
+	// 		// In JWT, the expiry time is expressed as unix milliseconds
+	// 		ExpiresAt: expirationTime.Unix(),
+	// 	},
+	// }
 
-	// Declare the token with the algorithm used for signing, and the claims
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	// Create the JWT string
-	tokenString, err := token.SignedString(jwtKey)
-	if err != nil {
-		// If there is an error in creating the JWT return an internal server error
-		w.WriteHeader(http.StatusInternalServerError)
-		return err
-	}
+	// // Declare the token with the algorithm used for signing, and the claims
+	// token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	// // Create the JWT string
+	// tokenString, err := token.SignedString(jwtKey)
+	// if err != nil {
+	// 	// If there is an error in creating the JWT return an internal server error
+	// 	w.WriteHeader(http.StatusInternalServerError)
+	// 	return err
+	// }
 
-	fmt.Printf("=========tokenString:%s==============/n", tokenString)
-	ExampleParse(tokenString, string(jwtKey))
+	// fmt.Printf("=========tokenString:%s==============/n", tokenString)
+	// // ExampleParse(tokenString, string(jwtKey))
 
 	// ====================== end ======================
 
@@ -198,6 +203,42 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 	}
 
 	//start
+	//TODO: Maybe added recover
+	var tokenString string
+	if method == "/login" || method == "/register" {
+		var jwtKey = []byte("my_secret_key")
+
+		//
+		type Claims struct {
+			Username string `json:"username"`
+			jwt.StandardClaims
+		}
+
+		expirationTime := time.Now().Add(5 * time.Minute)
+		// Create the JWT claims, which includes the username and expiry time
+		claims := &Claims{
+			Username: ro.UserEmail,
+			StandardClaims: jwt.StandardClaims{
+				// In JWT, the expiry time is expressed as unix milliseconds
+				ExpiresAt: expirationTime.Unix(),
+			},
+		}
+
+		// Declare the token with the algorithm used for signing, and the claims
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		// Create the JWT string
+		tokenString, err := token.SignedString(jwtKey)
+		if err != nil {
+			// If there is an error in creating the JWT return an internal server error
+			w.WriteHeader(http.StatusInternalServerError)
+			return err
+		}
+
+		fmt.Printf("=========tokenString:%s==============/n", tokenString)
+		// ExampleParse(tokenString, string(jwtKey))
+
+	}
+
 	if method == "/register" {
 
 		fmt.Println("==================here===1111===:%s=============>>>>>>>>>", status)

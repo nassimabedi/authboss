@@ -115,6 +115,9 @@ type Config struct {
 		// then it would be available to be whitelisted by this
 		// configuration variable.
 		RegisterPreserveFields []string
+		//start
+		LoginPreserveFields   []string
+		//end
 
 		// RecoverTokenDuration controls how long a token sent via
 		// email for password recovery is valid for.

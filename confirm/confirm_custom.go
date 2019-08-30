@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	authboss.RegisterModule("confirm-custom", &ConfirmInterceptor{})
+	authboss.RegisterModule("confirm", &ConfirmInterceptor{})
 }
 
 type ConfirmInterceptor struct {
@@ -70,6 +70,15 @@ func (i *ConfirmInterceptor) ConfirmSMS(w http.ResponseWriter, r *http.Request) 
 
 }
 
+func (i *ConfirmInterceptor) invalidToken(w http.ResponseWriter, r *http.Request) error {
+	ro := authboss.RedirectOptions{
+		Code:         http.StatusTemporaryRedirect,
+		Failure:      "confirm token is invalid",
+		RedirectPath: i.origWriter.Config.Paths.ConfirmNotOK,
+	}
+	return i.origWriter.Config.Core.Redirector.Redirect(w, r, ro)
+}
+
 func (i *ConfirmInterceptor) Get(w http.ResponseWriter, r *http.Request) error {
 	fmt.Println("---------------------------override------------------------------------Get Confirm----------")
 	logger := i.origWriter.RequestLogger(r)
@@ -81,7 +90,7 @@ func (i *ConfirmInterceptor) Get(w http.ResponseWriter, r *http.Request) error {
 
 	if errs := validator.Validate(); errs != nil {
 		logger.Infof("validation failed in Confirm.Get, this typically means a bad token: %+v", errs)
-		return i.ConfirmCus.invalidToken(w, r)
+		return i.invalidToken(w, r)
 	}
 
 	values := authboss.MustHaveConfirmValues(validator)
@@ -93,12 +102,12 @@ func (i *ConfirmInterceptor) Get(w http.ResponseWriter, r *http.Request) error {
 	rawToken, err := base64.URLEncoding.DecodeString(values.GetToken())
 	if err != nil {
 		logger.Infof("error decoding token in Confirm.Get, this typically means a bad token: %s %+v", values.GetToken(), err)
-		return i.ConfirmCus.invalidToken(w, r)
+		return i.invalidToken(w, r)
 	}
 
 	if len(rawToken) != confirmTokenSize {
 		logger.Infof("invalid confirm token submitted, size was wrong: %d", len(rawToken))
-		return i.ConfirmCus.invalidToken(w, r)
+		return i.invalidToken(w, r)
 	}
 
 	selectorBytes := sha512.Sum512(rawToken[:confirmTokenSplit])
@@ -120,7 +129,9 @@ func (i *ConfirmInterceptor) Get(w http.ResponseWriter, r *http.Request) error {
 	//====================End
 	if err == authboss.ErrUserNotFound {
 		logger.Infof("confirm selector was not found in database: %s", selector)
-		return i.ConfirmCus.invalidToken(w, r)
+		// return authboss.Authboss.invalidToken(w, r)
+		// return i.ConfirmCus.invalidToken(w, r)
+		return i.invalidToken(w, r)
 	} else if err != nil {
 		return err
 	}
@@ -128,13 +139,13 @@ func (i *ConfirmInterceptor) Get(w http.ResponseWriter, r *http.Request) error {
 	dbVerifierBytes, err := base64.StdEncoding.DecodeString(user.GetConfirmVerifier())
 	if err != nil {
 		logger.Infof("invalid confirm verifier stored in database: %s", user.GetConfirmVerifier())
-		return i.ConfirmCus.invalidToken(w, r)
+		return i.invalidToken(w, r)
 	}
 
 	if subtle.ConstantTimeEq(int32(len(verifierBytes)), int32(len(dbVerifierBytes))) != 1 ||
 		subtle.ConstantTimeCompare(verifierBytes[:], dbVerifierBytes) != 1 {
 		logger.Info("stored confirm verifier does not match provided one")
-		return i.ConfirmCus.invalidToken(w, r)
+		return i.invalidToken(w, r)
 	}
 
 	user.PutConfirmSelector("")
