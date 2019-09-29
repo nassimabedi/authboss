@@ -297,7 +297,12 @@ func (s *SMSValidator) Post(w http.ResponseWriter, r *http.Request) error {
 	if err == authboss.ErrUserNotFound {
 		pid, ok := authboss.GetSession(r, SessionSMSPendingPID)
 		if ok && len(pid) != 0 {
-			abUser, err = s.Authboss.Config.Storage.Server.Load(r.Context(), pid)
+			//start
+			// abUser, err = s.Authboss.Config.Storage.Server.Load(r.Context(), pid)
+			x_Consumer_Id := r.Header.Get("X-Consumer-ID")
+			user_type := r.Header.Get("user_type")
+			abUser, err = s.Authboss.Config.Storage.ServerCustom.Load(r.Context(), pid, x_Consumer_Id, user_type)
+			//end
 		}
 	}
 	if err != nil {
@@ -377,9 +382,12 @@ func (s *SMSValidator) validateCode(w http.ResponseWriter, r *http.Request, user
 		if verified {
 			logger.Infof("user %s used recovery code instead of sms2fa", user.GetPID())
 			user.PutRecoveryCodes(twofactor.EncodeRecoveryCodes(recoveryCodes))
-			if err := s.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+			//start
+			//if err := s.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+			if err := s.Authboss.Config.Storage.ServerCustom.Save(r.Context(), user); err != nil {
 				return err
 			}
+			//end
 		}
 	} else {
 		code, ok := authboss.GetSession(r, SessionSMSSecret)
@@ -428,9 +436,12 @@ func (s *SMSValidator) validateCode(w http.ResponseWriter, r *http.Request, user
 		// Save the user which activates 2fa (phone number should be stored from earlier)
 		user.PutSMSPhoneNumber(phoneNumber)
 		user.PutRecoveryCodes(twofactor.EncodeRecoveryCodes(crypted))
-		if err = s.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+		//start
+		// if err = s.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+		if err = s.Authboss.Config.Storage.ServerCustom.Save(r.Context(), user); err != nil {
 			return err
 		}
+		//end
 
 		authboss.DelSession(w, SessionSMSSecret)
 		authboss.DelSession(w, SessionSMSNumber)
@@ -439,9 +450,14 @@ func (s *SMSValidator) validateCode(w http.ResponseWriter, r *http.Request, user
 		data = authboss.HTMLData{twofactor.DataRecoveryCodes: codes}
 	case PageSMSRemove:
 		user.PutSMSPhoneNumber("")
-		if err := s.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+		//start
+		// if err := s.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+		// 	return err
+		// }
+		if err := s.Authboss.Config.Storage.ServerCustom.Save(r.Context(), user); err != nil {
 			return err
 		}
+		//end
 
 		authboss.DelSession(w, authboss.Session2FA)
 

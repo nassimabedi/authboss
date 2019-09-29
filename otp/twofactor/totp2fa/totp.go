@@ -281,7 +281,7 @@ func (t *TOTP) PostConfirm(w http.ResponseWriter, r *http.Request) error {
 	// Save the user which activates 2fa
 	user.PutTOTPSecretKey(totpSecret)
 	user.PutRecoveryCodes(twofactor.EncodeRecoveryCodes(crypted))
-	if err = t.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+	if err = t.Authboss.Config.Storage.ServerCustom.Save(r.Context(), user); err != nil {
 		return err
 	}
 
@@ -317,9 +317,12 @@ func (t *TOTP) PostRemove(w http.ResponseWriter, r *http.Request) error {
 
 	authboss.DelSession(w, authboss.Session2FA)
 	user.PutTOTPSecretKey("")
-	if err = t.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+	//start
+	// if err = t.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+	if err = t.Authboss.Config.Storage.ServerCustom.Save(r.Context(), user); err != nil {
 		return err
 	}
+	//end
 
 	logger := t.RequestLogger(r)
 	logger.Infof("user %s disabled totp 2fa", user.GetPID())
@@ -396,7 +399,12 @@ func (t *TOTP) validate(r *http.Request) (User, bool, error) {
 	if err == authboss.ErrUserNotFound {
 		pid, ok := authboss.GetSession(r, SessionTOTPPendingPID)
 		if ok && len(pid) != 0 {
-			abUser, err = t.Authboss.Config.Storage.Server.Load(r.Context(), pid)
+			//start
+			// abUser, err = t.Authboss.Config.Storage.Server.Load(r.Context(), pid)
+			x_Consumer_Id := r.Header.Get("X-Consumer-ID")
+			user_type := r.Header.Get("user_type")
+			abUser, err = t.Authboss.Config.Storage.ServerCustom.Load(r.Context(), pid, x_Consumer_Id, user_type)
+			//end
 		}
 	}
 	if err != nil {
@@ -425,9 +433,12 @@ func (t *TOTP) validate(r *http.Request) (User, bool, error) {
 		if ok {
 			logger.Infof("user %s used recovery code instead of sms2fa", user.GetPID())
 			user.PutRecoveryCodes(twofactor.EncodeRecoveryCodes(recoveryCodes))
-			if err := t.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+			//start
+			// if err := t.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+			if err := t.Authboss.Config.Storage.ServerCustom.Save(r.Context(), user); err != nil {
 				return nil, false, err
 			}
+			//end
 		}
 
 		return user, ok, nil

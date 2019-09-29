@@ -70,8 +70,14 @@ func (a *Authboss) CurrentUser(r *http.Request) (User, error) {
 	} else if len(pid) == 0 {
 		return nil, ErrUserNotFound
 	}
+	//start
 
-	return a.currentUser(r.Context(), pid)
+	x_Consumer_Id := r.Header.Get("X-Consumer-ID")
+	user_type := r.Header.Get("user_type")
+
+	// return a.currentUser(r.Context(), pid)
+	return a.currentUser(r.Context(), pid, x_Consumer_Id, user_type)
+	//end
 }
 
 // CurrentUserP retrieves the current user but panics if it's not available for
@@ -86,8 +92,13 @@ func (a *Authboss) CurrentUserP(r *http.Request) User {
 	return i
 }
 
-func (a *Authboss) currentUser(ctx context.Context, pid string) (User, error) {
-	return a.Storage.Server.Load(ctx, pid)
+//start
+// func (a *Authboss) currentUser(ctx context.Context, pid string) (User, error) {
+func (a *Authboss) currentUser(ctx context.Context, pid string, customer_token string, user_type string) (User, error) {
+
+	// return a.Storage.Server.Load(ctx, pid)
+	return a.Storage.ServerCustom.Load(ctx, pid, customer_token, user_type)
+	//end
 }
 
 // LoadCurrentUserID takes a pointer to a pointer to the request in order to
@@ -126,6 +137,7 @@ func (a *Authboss) LoadCurrentUserIDP(r **http.Request) string {
 // contains the new context that has the user in it. Calls LoadCurrentUserID
 // so the primary id is also put in the context.
 func (a *Authboss) LoadCurrentUser(r **http.Request) (User, error) {
+
 	if user := (*r).Context().Value(CTXKeyUser); user != nil {
 		return user.(User), nil
 	}
@@ -138,7 +150,11 @@ func (a *Authboss) LoadCurrentUser(r **http.Request) (User, error) {
 	}
 
 	ctx := (**r).Context()
-	user, err := a.currentUser(ctx, pid)
+	//start
+	// user, err := a.currentUser(ctx, pid)
+	x_Consumer_Id := (**r).Header.Get("X-Consumer-ID")
+	user_type := (**r).Header.Get("user_type")
+	user, err := a.currentUser(ctx, pid, x_Consumer_Id, user_type)
 	if err != nil {
 		return nil, err
 	}

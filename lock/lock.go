@@ -68,7 +68,10 @@ func (l *Lock) AfterAuthSuccess(w http.ResponseWriter, r *http.Request, handled 
 	lu.PutAttemptCount(0)
 	lu.PutLastAttempt(time.Now().UTC())
 
-	return false, l.Authboss.Config.Storage.Server.Save(r.Context(), lu)
+	//start
+	// return false, l.Authboss.Config.Storage.Server.Save(r.Context(), lu)
+	return false, l.Authboss.Config.Storage.ServerCustom.Save(r.Context(), lu)
+	//end
 }
 
 // AfterAuthFail adjusts the attempt number and time negatively
@@ -98,9 +101,12 @@ func (l *Lock) AfterAuthFail(w http.ResponseWriter, r *http.Request, handled boo
 	}
 	lu.PutLastAttempt(time.Now().UTC())
 
-	if err := l.Authboss.Config.Storage.Server.Save(r.Context(), lu); err != nil {
+	//start
+	// if err := l.Authboss.Config.Storage.Server.Save(r.Context(), lu); err != nil {
+	if err := l.Authboss.Config.Storage.ServerCustom.Save(r.Context(), lu); err != nil {
 		return false, err
 	}
+	//end
 
 	if !nowLocked {
 		return false, nil

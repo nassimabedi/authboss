@@ -315,46 +315,15 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 		data["role"] = role.String()
 		data["custome_fields"] = customFields.String()
 
-		// fmt.Println(reflect.Indirect(v).FieldByName("Lastname"))
-		// fmt.Println(reflect.Indirect(v).FieldByName("Type"))
-		// fmt.Println(reflect.Indirect(v).FieldByName("NationalCode"))
-		// fmt.Println(reflect.Indirect(v).FieldByName("Birthday"))
-		// fmt.Println(reflect.Indirect(v).FieldByName("TenantEmail"))
-		// fmt.Println(reflect.Indirect(v).FieldByName("TenantConfirmURL"))
-		// fmt.Println(reflect.Indirect(v).FieldByName("CustomeFields"))
-		// fmt.Println(reflect.Indirect(v).FieldByName("Role"))
-
-		// data["refresh_token"] = ""
-		// data["username"] = ro.UserEmail
-		// data["fullname"] = ""
-		// data["email"] = ro.UserEmail
-		// var myslice []string
-		// data["roles"] = myslice
-		// data["permissions"] = myslice
-		// data["email"] =
-
-		// 	"email":"myemail@mail.com",// required when type is "email"
-		// "tenant_email": "info@tenant.com" // required when type is "email"
-		// "tenant_confirm_url":"tenant.com/tenant" //required
-		// "mobile":"09111087815", // required when type is "mobile"
-		// "mobile_seed":"+98",
-		// "firstname":"firstname",
-		// "lastname":"lastname",
-		// "national_code":"12907652",
-		// "birthday":"1990-04-05",
-		// "roles": [],
-		// "custome_fields":[{"phone":"887219031":"address":"Tehran"}]
-		// "oauth2_provider":"",
-		// "oauth2_user_info":[]
 
 		//if status == "307" && method == "/register" {
 		//    status = "200"
 		//}
 	}
-	if status == "307" && method == "/register" {
-		fmt.Println("===============register status 307")
-		status = "200"
-	}
+	//if status == "307" && method == "/register" {
+	//	fmt.Println("===============register status 307")
+	//	status = "200"
+	//}
 
 	//end
 
@@ -374,8 +343,8 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 
 	if ro.Code != 0 {
 		//TODO : delete 307
-		//if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect) {
-		if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect || ro.Code == 307) {
+		if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect) {
+		//if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect || ro.Code == 307) {
 
 			w.WriteHeader(http.StatusOK)
 		} else {
