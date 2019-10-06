@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"reflect"
 	"sort"
 
 	"fmt"
@@ -49,6 +50,8 @@ func hasString(arr []string, s string) bool {
 
 func (i *AuthInterceptor) LoginPost(w http.ResponseWriter, r *http.Request) error {
 	fmt.Println("===================LoginPost=====================================")
+	user_type := r.Header.Get("user_type")
+	fmt.Printf("----------user_type:%s-----------\n", user_type)
 	logger := i.origWriter.RequestLogger(r)
 
 	validatable, err := i.origWriter.Core.BodyReader.Read(PageLogin, r)
@@ -64,6 +67,7 @@ func (i *AuthInterceptor) LoginPost(w http.ResponseWriter, r *http.Request) erro
 		preserve = make(map[string]string)
 
 		for k, v := range arbitrary {
+			fmt.Println("----------------------::::::---------------------------------", k)
 			if hasString(i.origWriter.Config.Modules.LoginPreserveFields, k) {
 				preserve[k] = v
 			}
@@ -72,45 +76,102 @@ func (i *AuthInterceptor) LoginPost(w http.ResponseWriter, r *http.Request) erro
 
 	fmt.Println(arbitrary)
 	fmt.Println(preserve)
+	// userVals := authboss.MustHaveUserValues(validatable)
+	// pid, password := userVals.GetPID(), userVals.GetPassword()
+
 	fmt.Println("------------------>>>>>>...................................^^^^^^^^^^^^^^^^^^^^^^>>>>>>>>")
 	//start
-	if preserve["type"] == "email" {
-		fmt.Println("-----------------userType is email----------------->>>>>>>>..................")
-		if val, ok := preserve["email"]; !ok {
-			if len(val) == 0 {
-				w.WriteHeader(404)
-				w.Write([]byte(`Email is require`))
-			}
-			fmt.Println(val)
-			fmt.Println(ok)
-			return nil
-			//do something here
-		}
+	// if preserve["type"] == "email" {
+	// 	fmt.Println("-----------------userType is email----------------->>>>>>>>..................")
+	// 	if val, ok := preserve["email"]; !ok {
+	// 		if len(val) == 0 {
+	// 			w.WriteHeader(404)
+	// 			w.Write([]byte(`Email is require`))
+	// 		}
+	// 		fmt.Println(val)
+	// 		fmt.Println(ok)
+	// 		return nil
+	// 		//do something here
+	// 	}
 
-	} else if preserve["type"] == "mobile" {
-		fmt.Println("-----------------userType is mobile----------------->>>>>>>>..................")
-		if val, ok := preserve["mobile"]; !ok {
-			if len(val) == 0 {
-				fmt.Println("-----------------mobile not set----------------->>>>>>>>..................")
-				w.WriteHeader(404)
-				w.Write([]byte(`Mobile is require`))
-			}
-			fmt.Println(val)
-			fmt.Println(ok)
-			return nil
-			//do something here
-		}
-	}
+	// } else if preserve["type"] == "mobile" {
+	// 	fmt.Println("-----------------userType is mobile----------------->>>>>>>>..................")
+	// 	if val, ok := preserve["mobile"]; !ok {
+	// 		if len(val) == 0 {
+	// 			fmt.Println("-----------------mobile not set----------------->>>>>>>>..................")
+	// 			w.WriteHeader(404)
+	// 			w.Write([]byte(`Mobile is require`))
+	// 		}
+	// 		fmt.Println(val)
+	// 		fmt.Println(ok)
+	// 		return nil
+	// 		//do something here
+	// 	}
+	// }
 
-	fmt.Println(arbitrary)
-	fmt.Println(preserve)
-	fmt.Println(preserve["type"])
-	fmt.Println("----------------------------------------->>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<")
+	// fmt.Println(arbitrary)
+	// fmt.Println(preserve)
+	// fmt.Println(preserve["type"])
+	// fmt.Println("----------------------------------------->>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<")
+
+	// if user_type == "email" {
+	// 	fmt.Println("-----------------userType is email----------------->>>>>>>>..................")
+
+	// 	// if len(user_type) == 0 {
+	// 	// 	w.WriteHeader(404)
+	// 	// 	w.Write([]byte(`Email is require`))
+	// 	// }
+	// 	if val, ok := preserve["email"]; !ok {
+	// 		if len(val) == 0 {
+	// 			w.WriteHeader(404)
+	// 			w.Write([]byte(`Email is require`))
+	// 		}
+	// 		fmt.Println(val)
+	// 		fmt.Println(ok)
+	// 		return nil
+	// 		//do something here
+	// 	}
+
+	// } else if preserve["type"] == "mobile" {
+	// 	fmt.Println("-----------------userType is mobile----------------->>>>>>>>..................")
+	// 	if val, ok := preserve["mobile"]; !ok {
+	// 		if len(val) == 0 {
+	// 			fmt.Println("-----------------mobile not set----------------->>>>>>>>..................")
+	// 			w.WriteHeader(404)
+	// 			w.Write([]byte(`Mobile is require`))
+	// 		}
+	// 		fmt.Println(val)
+	// 		fmt.Println(ok)
+	// 		return nil
+	// 		//do something here
+	// 	}
+	// }
+
 	//end
 	// Skip validation since all the validation happens during the database lookup and
 	// password check.
 	creds := authboss.MustHaveUserValues(validatable)
+	userVals := authboss.MustHaveUserValues(validatable)
+	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>........................................................")
+	fmt.Println(userVals)
+	fmt.Println(reflect.TypeOf(userVals))
+	fmt.Println(userVals.Validate())
+	// fmt.Println(userVals.interface{})
 
+	t := reflect.TypeOf(userVals)
+	fmt.Printf("Number of methods: %d\n", t.NumMethod())
+	for i := 0; i < t.NumMethod(); i++ {
+		m := t.Method(i)
+		fmt.Printf("Method %s\n", m)
+		fmt.Printf("\tName: %s\n", m.Name)
+		fmt.Printf("\tPackage path: %s\n", m.PkgPath)
+	}
+	// userVals.GetValues()
+
+	// if val, ok := userVals[0]["email"]; ok {
+	// 	//do something here
+	// 	fmt.Println(val)
+	// }
 	pid := creds.GetPID()
 
 	//start
@@ -119,7 +180,7 @@ func (i *AuthInterceptor) LoginPost(w http.ResponseWriter, r *http.Request) erro
 	//end
 
 	//TODO: find type
-	pidUser, err := i.origWriter.Storage.ServerCustom.Load(r.Context(), pid, customerToken, "email")
+	pidUser, err := i.origWriter.Storage.ServerCustom.Load(r.Context(), pid, customerToken, user_type)
 	//pidUser, err := a.Authboss.Storage.Server.Load(r.Context(), pid)
 	if err == authboss.ErrUserNotFound {
 		logger.Infof("failed to load user requested by pid: %s", pid)

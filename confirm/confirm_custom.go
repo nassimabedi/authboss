@@ -66,7 +66,86 @@ func (i *ConfirmInterceptor) Init(ab *authboss.Authboss) (err error) {
 func (i *ConfirmInterceptor) ConfirmSMS(w http.ResponseWriter, r *http.Request) error {
 	logger := i.origWriter.RequestLogger(r)
 	logger.Infof("=========================ConfirmSMS================================== ")
-	return nil
+	validator, err := i.origWriter.Config.Core.BodyReader.Read(PageConfirm, r)
+	if err != nil {
+		return err
+	}
+
+	if errs := validator.Validate(); errs != nil {
+		logger.Infof("validation failed in Confirm.Get, this typically means a bad token: %+v", errs)
+		return i.invalidToken(w, r)
+	}
+
+	values := authboss.MustHaveConfirmValues(validator)
+
+	//======start =============================
+	logger.Infof("===============validator====token=%s===== cus_token:%s==", values.GetToken(), values.GetCustomerToken())
+	//=======end =====================================
+
+	rawToken, err := base64.URLEncoding.DecodeString(values.GetToken())
+	if err != nil {
+		logger.Infof("error decoding token in Confirm.Get, this typically means a bad token: %s %+v", values.GetToken(), err)
+		return i.invalidToken(w, r)
+	}
+
+	if len(rawToken) != confirmTokenSize {
+		logger.Infof("invalid confirm token submitted, size was wrong: %d", len(rawToken))
+		return i.invalidToken(w, r)
+	}
+
+	selectorBytes := sha512.Sum512(rawToken[:confirmTokenSplit])
+	verifierBytes := sha512.Sum512(rawToken[confirmTokenSplit:])
+	selector := base64.StdEncoding.EncodeToString(selectorBytes[:])
+
+	// storer := authboss.EnsureCanConfirm(i.ConfirmCus.Authboss.Config.Storage.Server)
+	// tip: This function create in custom file
+	storer := authboss.EnsureCanConfirmCus(i.origWriter.Config.Storage.ServerCustom)
+
+	//====================start
+
+	//user, err := storer.LoadByConfirmSelector(r.Context(), selector)
+	// fmt.Printf("------------------------customerTokenConfirm:%s--------------", values.GetCustomerToken())
+	// user, err := storer.LoadByConfirmSelector(r.Context(), selector, values.GetCustomerToken())
+	bb := r.Header.Get("X-Consumer-ID")
+	fmt.Printf("------------------------customerTokenConfirm:%s--------------\n", bb)
+	user, err := storer.LoadByConfirmSelector(r.Context(), selector, bb)
+	//====================End
+	if err == authboss.ErrUserNotFound {
+		logger.Infof("confirm selector was not found in database: %s", selector)
+		// return authboss.Authboss.invalidToken(w, r)
+		// return i.ConfirmCus.invalidToken(w, r)
+		return i.invalidToken(w, r)
+	} else if err != nil {
+		return err
+	}
+
+	dbVerifierBytes, err := base64.StdEncoding.DecodeString(user.GetConfirmVerifier())
+	if err != nil {
+		logger.Infof("invalid confirm verifier stored in database: %s", user.GetConfirmVerifier())
+		return i.invalidToken(w, r)
+	}
+
+	if subtle.ConstantTimeEq(int32(len(verifierBytes)), int32(len(dbVerifierBytes))) != 1 ||
+		subtle.ConstantTimeCompare(verifierBytes[:], dbVerifierBytes) != 1 {
+		logger.Info("stored confirm verifier does not match provided one")
+		return i.invalidToken(w, r)
+	}
+
+	user.PutConfirmSelector("")
+	user.PutConfirmVerifier("")
+	user.PutConfirmed(true)
+
+	logger.Infof("user %s confirmed their account", user.GetPID())
+	if err = i.origWriter.Config.Storage.ServerCustom.Save(r.Context(), user); err != nil {
+		return err
+	}
+
+	ro := authboss.RedirectOptions{
+		Code:         http.StatusTemporaryRedirect,
+		Success:      "You have successfully confirmed your account.",
+		RedirectPath: i.origWriter.Config.Paths.ConfirmOK,
+	}
+	return i.origWriter.Config.Core.Redirector.Redirect(w, r, ro)
 
 }
 
@@ -293,9 +372,10 @@ func (i *ConfirmInterceptor) SendConfirmEmail(ctx context.Context, to, token str
 	//TODO : 1.delete customerToken 2. added send sms
 	if len(tenant_email) > 0 && user_type == "email" {
 		//if len(tenant_email) > 0  {
-		i.sendEmailByConsumer(ctx, to, token, customerToken, tenant_email, emailBody)
+		// i.sendEmailByConsumer(ctx, to, token, customerToken, tenant_email, emailBody)
+		i.sendEmailByManam(to, customerToken, emailBody, tenant_email)
 	} else if len(tenant_email) == 0 && user_type == "email" {
-		i.sendEmailByManam(to, customerToken, emailBody)
+		i.sendEmailByManam(to, customerToken, emailBody, "")
 	} else if user_type == "mobile" {
 		i.sendSMSByManam(mobile, customerToken, emailBody)
 	}
@@ -390,13 +470,14 @@ func (i *ConfirmInterceptor) sendEmailByConsumer(ctx context.Context, to, token 
 
 }
 
-func (i *ConfirmInterceptor) sendEmailByManam(to, customerToken string, emailBody string) error {
+func (i *ConfirmInterceptor) sendEmailByManam(to, customerToken string, emailBody string, from string) error {
 
 	server := fmt.Sprintf("%s:%d", "smtp.manam.ir", 587)
 	auth := unencryptedAuth{
 		smtp.PlainAuth(
 			"",
 			"confirm@manam.ir",
+			// "info@google.com",
 			"Conf1010",
 			"smtp.manam.ir",
 		),
@@ -404,6 +485,11 @@ func (i *ConfirmInterceptor) sendEmailByManam(to, customerToken string, emailBod
 
 	mailer := defaults.NewSMTPMailer(server, auth)
 
+	if len(from) == 0 {
+		from = i.origWriter.Config.Mail.From
+	}
+
+	fmt.Println("-----------------------sendEmailByManam ---------------------------------", from)
 	mail := authboss.Email{
 		// From:    creds.Email,
 		// To:      []string{creds.Email},
@@ -412,16 +498,21 @@ func (i *ConfirmInterceptor) sendEmailByManam(to, customerToken string, emailBod
 		// To:      []string{"nassimabedi@gmail.com"},
 		// Subject: "Authboss Test SMTP Mailer1111", //i.origWriter.Config.Mail.SubjectPrefix + "Confirm New Account"
 
-		From:    i.origWriter.Config.Mail.From,
-		To:      []string{to},
-		Subject: i.origWriter.Config.Mail.SubjectPrefix + "Confirm New Account",
+		// From:    i.origWriter.Config.Mail.From,
+		From: from,
+		To:   []string{to},
+		// Subject: i.origWriter.Config.Mail.SubjectPrefix + "Confirm New Account",
+		// Subject: i.origWriter.Config.Mail.SubjectPrefix + " in Manam",
 	}
 
 	txtOnly := mail
 	// txtOnly.Subject += ": Text Content"
-	txtOnly.Subject += i.origWriter.Config.Mail.SubjectPrefix + "Confirm New Account"
+	// txtOnly.Subject += i.origWriter.Config.Mail.SubjectPrefix + "Confirm New Account"
+	txtOnly.Subject += i.origWriter.Config.Mail.SubjectPrefix + " in Manam"
 	// txtOnly.TextBody = "Authboss\nSMTP\nTest\nWith\nNewlines"
 	txtOnly.TextBody = emailBody
+	// txtOnly.From = from
+	// txtOnly.FromName = from
 
 	if err_ := mailer.Send(context.Background(), txtOnly); err_ != nil {
 		//t.Error(err)
@@ -438,6 +529,12 @@ func (i *ConfirmInterceptor) sendSMSByManam(mobile, customerToken string, body s
 	fmt.Println("-------------------------------send SMS By Manam---------------------")
 	fmt.Println("------------------------------- mobile : %s ---------------------", mobile)
 	fmt.Println("------------------------------- body: %s ---------------------", body)
+	// SendSMS("test")
+	// 5000...
+	// SendSMS("09123599895", "e4h31", "09356315367", "09123599895", "go rest test", false)
+	// SendSMS("09123599895", "e4h31", "09356315367", "5000...", "go rest test", false)
+	// SendSMS("09123599895", "e4h31", "09356315367", "100070", "go rest test", false)
+	SendSMS("09123599895", "e4h31", "09356315367", "2000800", "go rest test", false)
 
 	return nil
 

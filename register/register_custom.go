@@ -62,6 +62,8 @@ func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 	}
 
 	//start
+	userType := req.Header.Get("user_type")
+	fmt.Println("-----------------userType:%s----------------->>>>>>>>..................", userType)
 	if preserve["type"] == "email" {
 		fmt.Println("-----------------userType is email----------------->>>>>>>>..................")
 		if val, ok := preserve["email"]; !ok {
@@ -110,6 +112,8 @@ func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 
 	// Get values from request
 	userVals := authboss.MustHaveUserValues(validatable)
+	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>........................................................")
+	fmt.Println(userVals)
 	pid, password := userVals.GetPID(), userVals.GetPassword()
 
 	// Put values into newly created user for storage

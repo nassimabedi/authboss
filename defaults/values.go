@@ -274,6 +274,9 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 	//bb := r.Header.Get("customer_token")
 	bb := r.Header.Get("X-Consumer-ID")
 	fmt.Printf("----------customer_token:%s-----------\n", bb)
+
+	user_type := r.Header.Get("user_type")
+        fmt.Printf("----------user_type:%s-----------\n", user_type)
 	method := r.URL.Path
 
 	if len(bb) == 0 {
@@ -387,6 +390,7 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 				}
 			}
 		}
+		arbitrary["type"] = user_type
 
 		var pid string
 		if h.UseUsername {

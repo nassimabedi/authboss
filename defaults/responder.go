@@ -110,75 +110,20 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 	// =================== start ======================
 	cusToken := req.Header.Get("X-Consumer-ID")
 	fmt.Printf("------------------------redirectAPI:%s---->>>aaaaaaaaaa.......>>>>----------\n", cusToken)
-	// a := UserValues.GetPID()
-	// fmt.Println(a)
-	// a := authboss.Authboss.user.GetPID()
-	// fmt.Println(a)
 
-	// storer_ := authboss.CreatingServerStorerCustom(*authboss.Authboss)
-	// storer_ := authboss.CreatingServerStorerCustom()
-	// authboss.EnsureCanCreateCus(r.RenderCus)
-	// a.Authboss.Storage.Server.Load
-	// Auth.CurrentUser(*authboss.Authboss, req)
+	// c := r.Renderer.Load("login")
 
-	// Auth.CurrentUser(req)
-	// authboss.EnsureCanCreate(authboss.Authboss)
-	// authboss.ServerStorerCustom
-	// authboss.CreatingServerStorerCustom
-	// r.Authboss.*Config.Storage.Server
-	// Auth.Authboss.Config.Storage.Server
-	// b := authboss.CreatingServerStorerCustom(*authboss.Authboss)
-	// storer_.displayUserInfo(ro.UserEmail, cusToken)
+	// if user := req.Context().Value("user"); user != nil {
 
-	// pidUser, err := r.RenderCus.Storage.ServerCustom.Load(req.Context(), ro.UserEmail, cusToken, "email")
-	// fmt.Println(pidUser)
-	// fmt.Println(err)
-	// Storage.ServerCustom.Load(r.Context(), pid, customerToken, "email")
+	// 	fmt.Println(".................I am Here correct :D :D............user.all:%s...............", user)
+	// }
 
-	c := r.Renderer.Load("login")
-
-	if user := req.Context().Value("user"); user != nil {
-
-		fmt.Println(".................I am Here correct :D :D............user.all:%s...............", user)
-	}
-
-	fmt.Printf("-------------------formvalueName:%s----------ro:%s------/n", r.FormValueName, c)
-	fmt.Printf("-------email1:%s-------------------", ro.UserEmail)
+	// fmt.Printf("-------------------formvalueName:%s----------ro:%s------\n", r.FormValueName, c)
+	// fmt.Printf("-------email1:%s-------------------", ro.UserEmail)
 
 	method := req.URL.Path
 
-	fmt.Printf("------------------------method:%s---->>>url:%s.......>>>>----------/n", req.Method, html.EscapeString(req.URL.Path))
-
-	// var jwtKey = []byte("my_secret_key")
-
-	// //
-	// type Claims struct {
-	// 	Username string `json:"username"`
-	// 	jwt.StandardClaims
-	// }
-
-	// expirationTime := time.Now().Add(5 * time.Minute)
-	// // Create the JWT claims, which includes the username and expiry time
-	// claims := &Claims{
-	// 	Username: ro.UserEmail,
-	// 	StandardClaims: jwt.StandardClaims{
-	// 		// In JWT, the expiry time is expressed as unix milliseconds
-	// 		ExpiresAt: expirationTime.Unix(),
-	// 	},
-	// }
-
-	// // Declare the token with the algorithm used for signing, and the claims
-	// token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	// // Create the JWT string
-	// tokenString, err := token.SignedString(jwtKey)
-	// if err != nil {
-	// 	// If there is an error in creating the JWT return an internal server error
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	return err
-	// }
-
-	// fmt.Printf("=========tokenString:%s==============/n", tokenString)
-	// // ExampleParse(tokenString, string(jwtKey))
+	fmt.Printf("------------------------method:%s---->>>url:%s.......>>>>----------\n", req.Method, html.EscapeString(req.URL.Path))
 
 	// ====================== end ======================
 
@@ -205,6 +150,7 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 	//start
 	//TODO: Maybe added recover
 	var tokenString string
+	var err error
 	if method == "/login" || method == "/register" {
 		var jwtKey = []byte("my_secret_key")
 
@@ -227,14 +173,14 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 		// Declare the token with the algorithm used for signing, and the claims
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		// Create the JWT string
-		tokenString, err := token.SignedString(jwtKey)
+		tokenString, err = token.SignedString(jwtKey)
 		if err != nil {
 			// If there is an error in creating the JWT return an internal server error
 			w.WriteHeader(http.StatusInternalServerError)
 			return err
 		}
 
-		fmt.Printf("=========tokenString:%s==============/n", tokenString)
+		fmt.Printf("=========tokenString:%s==============\n", tokenString)
 		// ExampleParse(tokenString, string(jwtKey))
 
 	}
@@ -259,6 +205,7 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 	}
 
 	if method == "/login" || method == "/register" && status == "success" {
+		fmt.Println("--------------------------login-----------register----------status success----------------->>>>>>>")
 		data["access_token"] = tokenString
 		fmt.Println("---------------------------------------------------------------->>>>>>>")
 		// aa := reflect.Indirect(v).FieldByName("Firstname")
@@ -315,15 +262,14 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 		data["role"] = role.String()
 		data["custome_fields"] = customFields.String()
 
-
 		//if status == "307" && method == "/register" {
 		//    status = "200"
 		//}
 	}
-	//if status == "307" && method == "/register" {
-	//	fmt.Println("===============register status 307")
-	//	status = "200"
-	//}
+	if status == "307" && method == "/register" {
+		fmt.Println("===============register status 307")
+		status = "200"
+	}
 
 	//end
 
@@ -343,8 +289,8 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 
 	if ro.Code != 0 {
 		//TODO : delete 307
-		if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect) {
-		//if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect || ro.Code == 307) {
+		//if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect) {
+		if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect || ro.Code == 307) {
 
 			w.WriteHeader(http.StatusOK)
 		} else {
