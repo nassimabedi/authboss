@@ -35,8 +35,18 @@ const (
 	DataOTP = "otp"
 )
 
+//start
 // User for one time passwords
-type User interface {
+// type User interface {
+// 	authboss.User
+
+// 	// GetOTPs retrieves a string of comma separated bcrypt'd one time passwords
+// 	GetOTPs() string
+// 	// PutOTPs puts a string of comma separated bcrypt'd one time passwords
+// 	PutOTPs(string)
+// }
+
+type OTPableUser interface {
 	authboss.User
 
 	// GetOTPs retrieves a string of comma separated bcrypt'd one time passwords
@@ -45,9 +55,10 @@ type User interface {
 	PutOTPs(string)
 }
 
+//end
 // MustBeOTPable ensures the user can use one time passwords
-func MustBeOTPable(user authboss.User) User {
-	u, ok := user.(User)
+func MustBeOTPable(user authboss.User) OTPableUser {
+	u, ok := user.(OTPableUser)
 	if !ok {
 		panic(fmt.Sprintf("could not upgrade user to an otpable user, type: %T", u))
 	}
@@ -115,7 +126,12 @@ func (o *OTP) LoginPost(w http.ResponseWriter, r *http.Request) error {
 	creds := authboss.MustHaveUserValues(validatable)
 
 	pid := creds.GetPID()
-	pidUser, err := o.Authboss.Storage.Server.Load(r.Context(), pid)
+	//start
+	x_Consumer_Id := r.Header.Get("X-Consumer-ID")
+	user_type := r.Header.Get("user_type")
+	// pidUser, err := o.Authboss.Storage.Server.Load(r.Context(), pid)
+	pidUser, err := o.Authboss.Storage.ServerCustom.Load(r.Context(), pid, x_Consumer_Id, user_type)
+	//end
 	if err == authboss.ErrUserNotFound {
 		logger.Infof("failed to load user requested by pid: %s", pid)
 		data := authboss.HTMLData{authboss.DataErr: "Invalid Credentials"}
@@ -161,7 +177,7 @@ func (o *OTP) LoginPost(w http.ResponseWriter, r *http.Request) error {
 	passwords[matchPassword] = passwords[len(passwords)-1]
 	passwords = passwords[:len(passwords)-1]
 	otpUser.PutOTPs(joinOTPs(passwords))
-	if err = o.Authboss.Config.Storage.Server.Save(r.Context(), pidUser); err != nil {
+	if err = o.Authboss.Config.Storage.ServerCustom.Save(r.Context(), pidUser); err != nil {
 		return err
 	}
 
@@ -231,7 +247,7 @@ func (o *OTP) AddPost(w http.ResponseWriter, r *http.Request) error {
 	currentOTPs = append(currentOTPs, hash)
 	otpUser.PutOTPs(joinOTPs(currentOTPs))
 
-	if err := o.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+	if err := o.Authboss.Config.Storage.ServerCustom.Save(r.Context(), user); err != nil {
 		return err
 	}
 
@@ -256,7 +272,7 @@ func (o *OTP) ClearPost(w http.ResponseWriter, r *http.Request) error {
 	otpUser := MustBeOTPable(user)
 	otpUser.PutOTPs("")
 
-	if err := o.Authboss.Config.Storage.Server.Save(r.Context(), user); err != nil {
+	if err := o.Authboss.Config.Storage.ServerCustom.Save(r.Context(), user); err != nil {
 		return err
 	}
 

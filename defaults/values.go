@@ -276,7 +276,7 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 	fmt.Printf("----------customer_token:%s-----------\n", bb)
 
 	user_type := r.Header.Get("user_type")
-        fmt.Printf("----------user_type:%s-----------\n", user_type)
+	fmt.Printf("----------user_type:%s-----------\n", user_type)
 	method := r.URL.Path
 
 	if len(bb) == 0 {
@@ -331,6 +331,23 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 			// CustomerToken:     values[FormValueCustomerToken],
 			CustomerToken: bb,
 		}, nil
+
+	//start
+	case "otplogin":
+		var pid string
+		if h.UseUsername {
+			pid = values[FormValueUsername]
+		} else {
+			pid = values[FormValueEmail]
+		}
+
+		return UserValues{
+			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},
+			PID:               pid,
+			Password:          values[FormValuePassword],
+		}, nil
+
+	//end
 	case "recover_start":
 		fmt.Println("--------------------recover start--------------------------")
 		fmt.Println(values)

@@ -26,6 +26,18 @@ type User interface {
 	//end
 }
 
+//start
+type OTPableUser interface {
+	User
+
+	// GetOTPs retrieves a string of comma separated bcrypt'd one time passwords
+	GetOTPs() string
+	// PutOTPs puts a string of comma separated bcrypt'd one time passwords
+	PutOTPs(string)
+}
+
+//end
+
 // AuthableUser is identified by a password
 type AuthableUser interface {
 	User
