@@ -291,10 +291,13 @@ func (r Redirector) redirectAPI(w http.ResponseWriter, req *http.Request, ro aut
 		//TODO : delete 307
 		//if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect) {
 		if r.CorceRedirectTo200 && (ro.Code == http.StatusTemporaryRedirect || ro.Code == http.StatusPermanentRedirect || ro.Code == 307) {
-
+			fmt.Println("--------------------->>>>>>>>>>...........Login.............<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 			w.WriteHeader(http.StatusOK)
 		} else {
 			fmt.Println("===================================man ro.code hastam :%s====", ro.Code)
+			if ro.Code == 307 && method == "/login" {
+				ro.Code = 200
+			}
 			w.WriteHeader(ro.Code)
 		}
 	}

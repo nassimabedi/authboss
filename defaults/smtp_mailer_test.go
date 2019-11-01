@@ -9,10 +9,13 @@ import (
 	"net/smtp"
 	"testing"
 
+	// "fmt"
+
 	"github.com/volatiletech/authboss"
 )
 
 var (
+	// flagTestSMTPMailer = flag.Bool("test-smtp-mailer", false, "Test the smtp mailer")
 	flagTestSMTPMailer = flag.Bool("test-smtp-mailer", true, "Test the smtp mailer")
 )
 
@@ -28,6 +31,7 @@ func (a unencryptedAuth) Start(server *smtp.ServerInfo) (string, []byte, error) 
 
 func TestSMTPMailer(t *testing.T) {
 	t.Parallel()
+	t.Log("================hi===============")
 
 	if !*flagTestSMTPMailer {
 		t.Skip("SMTP Mailer Testing not enabled (-test-smtp-mailer flag)")
@@ -48,8 +52,13 @@ func TestSMTPMailer(t *testing.T) {
 	if err = json.Unmarshal(b, &creds); err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println("===========hi========================")
+
+	//server := fmt.Sprintf("%s:%d", creds.Server, creds.Port)
+	//mailer := NewSMTPMailer(server, smtp.PlainAuth("", creds.Email, creds.Password, creds.Server))
 
 	server := fmt.Sprintf("%s:%d", creds.Server, creds.Port)
+	//mailer := NewSMTPMailer(server, smtp.PlainAuth("", creds.Email, creds.Password, creds.Server))
 	auth := unencryptedAuth{
 		smtp.PlainAuth(
 			"",
@@ -58,13 +67,18 @@ func TestSMTPMailer(t *testing.T) {
 			"smtp.manam.ir",
 		),
 	}
-
+	//  mailer := NewSMTPMailer(server, smtp.PlainAuth("", "confirm@manam.ir", "Conf1010", "smtp.manam.ir"))
 	mailer := NewSMTPMailer(server, auth)
-	// mailer := NewSMTPMailer(server, smtp.PlainAuth("", creds.Email, creds.Password, creds.Server))
+
+	//mail := authboss.Email{
+	//	From:    creds.Email,
+	//	To:      []string{creds.Email},
+	//	Subject: "Authboss Test SMTP Mailer",
+	//}
 
 	mail := authboss.Email{
 		From:    creds.Email,
-		To:      []string{creds.Email},
+		To:      []string{"nassimabedi@gmail.com"},
 		Subject: "Authboss Test SMTP Mailer",
 	}
 
@@ -73,6 +87,7 @@ func TestSMTPMailer(t *testing.T) {
 	txtOnly.TextBody = "Authboss\nSMTP\nTest\nWith\nNewlines"
 
 	if err = mailer.Send(context.Background(), txtOnly); err != nil {
+		t.Log("---------------------Email mot send :P -----")
 		t.Error(err)
 	}
 

@@ -2,10 +2,12 @@ package confirm
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"net/smtp"
 	"net/url"
@@ -88,13 +90,22 @@ func (i *ConfirmInterceptor) ConfirmSMS(w http.ResponseWriter, r *http.Request) 
 		return i.invalidToken(w, r)
 	}
 
-	if len(rawToken) != confirmTokenSize {
+	// if len(rawToken) != confirmTokenSize {
+	// 	logger.Infof("invalid confirm token submitted, size was wrong: %d", len(rawToken))
+	// 	return i.invalidToken(w, r)
+	// }
+
+	if len(rawToken) != 12 {
 		logger.Infof("invalid confirm token submitted, size was wrong: %d", len(rawToken))
 		return i.invalidToken(w, r)
 	}
 
-	selectorBytes := sha512.Sum512(rawToken[:confirmTokenSplit])
-	verifierBytes := sha512.Sum512(rawToken[confirmTokenSplit:])
+	// selectorBytes := sha512.Sum512(rawToken[:confirmTokenSplit])
+	// verifierBytes := sha512.Sum512(rawToken[confirmTokenSplit:])
+
+	selectorBytes := sha512.Sum512(rawToken[:6])
+	verifierBytes := sha512.Sum512(rawToken[6:])
+
 	selector := base64.StdEncoding.EncodeToString(selectorBytes[:])
 
 	// storer := authboss.EnsureCanConfirm(i.ConfirmCus.Authboss.Config.Storage.Server)
@@ -258,7 +269,8 @@ func (i *ConfirmInterceptor) StartConfirmationWebCus(w http.ResponseWriter, r *h
 	//start
 	//bb := r.Header.Get("customer_token")
 	bb := r.Header.Get("X-Consumer-ID")
-	if err = i.StartConfirmation(r.Context(), cuser, true, bb); err != nil {
+	userType := r.Header.Get("user_type")
+	if err = i.StartConfirmation(r.Context(), cuser, true, bb, userType); err != nil {
 		return false, err
 	}
 	// if err = c.StartConfirmation(r.Context(), cuser, true); err != nil {
@@ -296,7 +308,8 @@ func (i *ConfirmInterceptor) StartConfirmationWeb(w http.ResponseWriter, r *http
 	cuser := authboss.MustBeConfirmable(user)
 	//start
 	bb := r.Header.Get("X-Consumer-ID")
-	if err = i.StartConfirmation(r.Context(), cuser, true, bb); err != nil {
+	user_type := r.Header.Get("user_type")
+	if err = i.StartConfirmation(r.Context(), cuser, true, bb, user_type); err != nil {
 		return false, err
 	}
 	// if err = c.StartConfirmation(r.Context(), cuser, true); err != nil {
@@ -313,14 +326,54 @@ func (i *ConfirmInterceptor) StartConfirmationWeb(w http.ResponseWriter, r *http
 	return true, i.origWriter.Config.Core.Redirector.Redirect(w, r, ro)
 }
 
-func (i *ConfirmInterceptor) StartConfirmation(ctx context.Context, user authboss.ConfirmableUser, sendEmail bool, customerToken string) error {
+func GenerateConfirmCredsCus(userType string) (selector, verifier, token string, err error) {
+	fmt.Println("--------------GenerateConfirmCreds----------------------")
+	fmt.Println(selector)
+	fmt.Println(confirmTokenSize)
+	var rawToken []byte
+	// var selectorBytes []byte
+	// var verifierBytes []byte
+	var selectorBytes [64]byte
+	var verifierBytes [64]byte
+
+	if userType == "email" {
+		rawToken = make([]byte, confirmTokenSize)
+	} else {
+		rawToken = make([]byte, 12)
+	}
+
+	if _, err = io.ReadFull(rand.Reader, rawToken); err != nil {
+		return "", "", "", err
+	}
+
+	if userType == "email" {
+		selectorBytes = sha512.Sum512(rawToken[:confirmTokenSplit])
+		verifierBytes = sha512.Sum512(rawToken[confirmTokenSplit:])
+	} else {
+		selectorBytes = sha512.Sum512(rawToken[:6])
+		verifierBytes = sha512.Sum512(rawToken[6:])
+	}
+
+	fmt.Println(rawToken)
+	fmt.Println(confirmTokenSplit)
+	fmt.Println(verifierBytes)
+	fmt.Println(selectorBytes)
+	fmt.Println("*********************************************")
+
+	return base64.StdEncoding.EncodeToString(selectorBytes[:]),
+		base64.StdEncoding.EncodeToString(verifierBytes[:]),
+		base64.URLEncoding.EncodeToString(rawToken),
+		nil
+}
+
+func (i *ConfirmInterceptor) StartConfirmation(ctx context.Context, user authboss.ConfirmableUser, sendEmail bool, customerToken string, userType string) error {
 	//----- Begin : Nassim
 	fmt.Println("<<<<<<<<<<<|||<<<<<<<<<<------override-------StartConfirmation token----------------->>>>>>>>>>|||>>>>>>>>>>>>>>>>>>")
 	//----- End : Nassim
 
 	logger := i.origWriter.Logger(ctx)
 
-	selector, verifier, token, err := GenerateConfirmCreds()
+	selector, verifier, token, err := GenerateConfirmCredsCus(userType)
 	if err != nil {
 		return err
 	}
@@ -377,7 +430,8 @@ func (i *ConfirmInterceptor) SendConfirmEmail(ctx context.Context, to, token str
 	} else if len(tenant_email) == 0 && user_type == "email" {
 		i.sendEmailByManam(to, customerToken, emailBody, "")
 	} else if user_type == "mobile" {
-		i.sendSMSByManam(mobile, customerToken, emailBody)
+		smsBody := creatSMSBody(token)
+		i.sendSMSByManam(mobile, customerToken, smsBody)
 	}
 
 	// email := authboss.Email{
@@ -529,12 +583,8 @@ func (i *ConfirmInterceptor) sendSMSByManam(mobile, customerToken string, body s
 	fmt.Println("-------------------------------send SMS By Manam---------------------")
 	fmt.Println("------------------------------- mobile : %s ---------------------", mobile)
 	fmt.Println("------------------------------- body: %s ---------------------", body)
-	// SendSMS("test")
-	// 5000...
-	// SendSMS("09123599895", "e4h31", "09356315367", "09123599895", "go rest test", false)
-	// SendSMS("09123599895", "e4h31", "09356315367", "5000...", "go rest test", false)
-	// SendSMS("09123599895", "e4h31", "09356315367", "100070", "go rest test", false)
-	SendSMS("09123599895", "e4h31", "09356315367", "2000800", "go rest test", false)
+
+	SendSMS("09123599895", "e4h31", mobile, "50001060669766", body, false)
 
 	return nil
 
@@ -544,7 +594,19 @@ func creatEmailBody(token string, tenant_confirm_url string) string {
 	// Please copy and paste the following link into your browser to confirm your account\n\nhttp://localhost:3000/auth/confirm?cnf=x5kaCnV_G-b43oXlm3OJ98QBhWuBvwpEFvJ6WJWBWq8ssj13wrHATssafmQl-sadRNmvfnFVH9PT-www8Od1bg%3D%3D&amp;customer_token=kiss_customerooooosdsd4
 	htmlbody := "Hi <br>"
 	htmlbody += "Please copy and paste the following link into your browser to confirm your account\n\n"
-	htmlbody += tenant_confirm_url + "?cnf=" + token
+	if len(tenant_confirm_url) > 0 {
+		htmlbody += tenant_confirm_url + "?cnf=" + token
+	} else {
+		htmlbody += token
+	}
+	return htmlbody
+}
+
+func creatSMSBody(token string) string {
+	// Please copy and paste the following link into your browser to confirm your account\n\nhttp://localhost:3000/auth/confirm?cnf=x5kaCnV_G-b43oXlm3OJ98QBhWuBvwpEFvJ6WJWBWq8ssj13wrHATssafmQl-sadRNmvfnFVH9PT-www8Od1bg%3D%3D&amp;customer_token=kiss_customerooooosdsd4
+	htmlbody := "Hi \n \n"
+	htmlbody += "Please copy and paste the following code in your site to confirm your account\n\n"
+	htmlbody += token
 	return htmlbody
 }
 

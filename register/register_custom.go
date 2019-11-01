@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -143,10 +144,33 @@ func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 	switch {
 	case err == authboss.ErrUserFound:
 		logger.Infof("user %s attempted to re-register", pid)
-		errs = []error{errors.New("user already exists")}
-		data := authboss.HTMLData{
-			authboss.DataValidation: authboss.ErrorMap(errs),
+		// errs = []error{errors.New("user already exists")}
+		// return append(errs, FieldError{r.FieldName, errors.New("Cannot be blank")})
+		// errs = []error{errors.New("user already exists")}
+		type mockFieldError struct {
+			name string
+			err  error
 		}
+
+		// errs = mockFieldError{"username", errors.New("user already exists")}
+
+		// errs.errors()
+		fmt.Println(errors.New("user already exists"))
+		fmt.Println(errs)
+
+		fmt.Println(reflect.TypeOf(errs))
+		//errs = {"msg":[]error{errors.New("user already exists")}} //[]error{errors.New("user already exists")}
+		//errs = []error{"msg":errors.New("user already exists")}
+		data := authboss.HTMLData{
+			// authboss.DataValidation: authboss.ErrorMap(errs),
+			// "msg": authboss.ErrorMap(errs),
+			// authboss.DataValidation: {"msg": authboss.ErrorMap(errs)},
+			// authboss.DataValidation: [{"msg1": "sssss"}]
+			// "sadsad": "{\"msg1\": \"sssss\"}",
+			authboss.DataValidation: `{"msg":"user already exists","statusCode":"406"}`,
+		}
+		fmt.Println("=============show data error=====================")
+		fmt.Println(data)
 		if preserve != nil {
 			data[authboss.DataPreserve] = preserve
 		}
