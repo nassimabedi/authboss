@@ -55,6 +55,12 @@ func (i *ConfirmInterceptor) Init(ab *authboss.Authboss) (err error) {
 
 	callbackMethod("/confirm_sms", i.origWriter.Config.Core.ErrorHandler.Wrap(i.ConfirmSMS))
 
+	// callbackMethod("/send_confirm_email", i.origWriter.Config.Core.ErrorHandler.Wrap(i.SendNewConfirmEmail))
+
+	i.origWriter.Config.Core.Router.Post("/send_confirm_email", i.origWriter.Core.ErrorHandler.Wrap(i.SendNewConfirmEmail))
+
+	// callbackMethod("/confirm_sms", i.origWriter.Config.Core.ErrorHandler.Wrap(i.ConfirmSMS))
+
 	// i.origWriter.Events.Before(authboss.EventAuth, i.ConfirmCus.PreventAuth)
 	i.origWriter.Events.After(authboss.EventRegister, i.StartConfirmationWeb)
 	// //start
@@ -62,6 +68,60 @@ func (i *ConfirmInterceptor) Init(ab *authboss.Authboss) (err error) {
 	// end
 
 	return nil
+
+}
+
+func (i *ConfirmInterceptor) SendNewConfirmEmail(w http.ResponseWriter, req *http.Request) error {
+	fmt.Println("------------------override-------SendNewConfirmEmail-------------------------------------")
+	logger := i.origWriter.RequestLogger(req)
+	validatable, err := i.origWriter.Core.BodyReader.Read("SendNewEmailConfirm", req)
+	if err != nil {
+		return err
+	}
+	fmt.Println(validatable)
+	fmt.Println(validatable)
+	newConfirmVals := authboss.MustHaveNewConfirmEmailValues(validatable)
+	fmt.Println(newConfirmVals)
+	fmt.Println(newConfirmVals.GetPID())
+
+	customerToken := req.Header.Get("X-Consumer-ID")
+	userType := req.Header.Get("user_type")
+
+	user, err := i.origWriter.Storage.ServerCustom.Load(req.Context(), newConfirmVals.GetPID(), customerToken, userType)
+
+	if err == authboss.ErrUserNotFound {
+		logger.Infof("user %s was attempted to be recovered, user does not exist, faking successful response", newConfirmVals.GetPID())
+		ro := authboss.RedirectOptions{
+			Code: http.StatusTemporaryRedirect,
+			// RedirectPath: i.origWriter.Authboss.Config.Paths.RecoverOK,
+			// Success: recoverInitiateSuccessFlash,
+			// Success:      recoverInitiateSuccessFlash,
+
+		}
+		return i.origWriter.Core.Redirector.Redirect(w, req, ro)
+	}
+	fmt.Println(user)
+
+	cuser := authboss.MustBeConfirmable(user)
+	bb := req.Header.Get("X-Consumer-ID")
+
+	if err = i.StartConfirmation(req.Context(), cuser, true, bb, userType); err != nil {
+		return err
+	}
+
+	ro := authboss.RedirectOptions{
+		Code: http.StatusTemporaryRedirect,
+		// RedirectPath: c.Authboss.Config.Paths.ConfirmNotOK,
+		Success: "Please verify your account, an e-mail has been sent to you.",
+	}
+
+	ro.Code = http.StatusTemporaryRedirect
+	ro.RedirectPath = i.origWriter.Config.Paths.ConfirmNotOK
+	ro.Success = "Please verify your account, an e-mail has been sent to you."
+
+	// return i.origWriter.Config.Core.Responder.Respond(w, req, http.StatusOK, PageRegister, data)
+	return i.origWriter.Core.Redirector.Redirect(w, req, ro)
+	// return true, i.origWriter.Config.Core.Red
 
 }
 
@@ -257,7 +317,7 @@ func (i *ConfirmInterceptor) Get(w http.ResponseWriter, r *http.Request) error {
 
 func (i *ConfirmInterceptor) StartConfirmationWebCus(w http.ResponseWriter, r *http.Request, ro authboss.RedirectOptions, handled bool) (bool, error) {
 	//----- Begin : Nassim
-	fmt.Println("<<<<<<<<<<<<<<<<<<<<<---override----------StartConfirmationWeb----------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+	fmt.Println("<<<<<<<<<<<<<<<<<<<<<---override----------StartConfirmationWebCus----------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 	//----- End : Nassim
 
 	user, err := i.origWriter.CurrentUser(r)
@@ -328,8 +388,11 @@ func (i *ConfirmInterceptor) StartConfirmationWeb(w http.ResponseWriter, r *http
 
 func GenerateConfirmCredsCus(userType string) (selector, verifier, token string, err error) {
 	fmt.Println("--------------GenerateConfirmCreds----------------------")
+	fmt.Println(userType)
+
 	fmt.Println(selector)
 	fmt.Println(confirmTokenSize)
+
 	var rawToken []byte
 	// var selectorBytes []byte
 	// var verifierBytes []byte
@@ -338,7 +401,7 @@ func GenerateConfirmCredsCus(userType string) (selector, verifier, token string,
 
 	if userType == "email" {
 		rawToken = make([]byte, confirmTokenSize)
-	} else {
+	} else if userType == "mobile" {
 		rawToken = make([]byte, 12)
 	}
 
@@ -349,7 +412,7 @@ func GenerateConfirmCredsCus(userType string) (selector, verifier, token string,
 	if userType == "email" {
 		selectorBytes = sha512.Sum512(rawToken[:confirmTokenSplit])
 		verifierBytes = sha512.Sum512(rawToken[confirmTokenSplit:])
-	} else {
+	} else if userType == "mobile" {
 		selectorBytes = sha512.Sum512(rawToken[:6])
 		verifierBytes = sha512.Sum512(rawToken[6:])
 	}
@@ -378,14 +441,18 @@ func (i *ConfirmInterceptor) StartConfirmation(ctx context.Context, user authbos
 		return err
 	}
 
-	user.PutConfirmed(false)
-	user.PutConfirmSelector(selector)
-	user.PutConfirmVerifier(verifier)
+	fmt.Println(token)
+	fmt.Println("------------------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>....................")
+
 	arbitraryField := user.GetArbitrary()
 	fmt.Println(arbitraryField["firstname"])
 	fmt.Println(arbitraryField["tenant_email"])
 	fmt.Println(arbitraryField["tenant_confirm_url"])
 	fmt.Println(arbitraryField["type"])
+
+	user.PutConfirmed(false)
+	user.PutConfirmSelector(selector)
+	user.PutConfirmVerifier(verifier)
 
 	logger.Infof("generated new confirm token for user: %s", user.GetPID())
 	if err := i.origWriter.Config.Storage.ServerCustom.Save(ctx, user); err != nil {
@@ -419,6 +486,7 @@ func (a unencryptedAuth) Start(server *smtp.ServerInfo) (string, []byte, error) 
 func (i *ConfirmInterceptor) SendConfirmEmail(ctx context.Context, to, token string, customerToken string, user_type string, tenant_email string, tenant_confirm_url string, mobile string) {
 	logger := i.origWriter.Logger(ctx)
 	logger.Infof(".............SendConfirmEmail %s", customerToken)
+	logger.Infof("--------------tenant_confirm_url: %s", tenant_confirm_url)
 	logger.Infof("--------------token: %s", token)
 	emailBody := creatEmailBody(token, tenant_confirm_url)
 
@@ -430,7 +498,7 @@ func (i *ConfirmInterceptor) SendConfirmEmail(ctx context.Context, to, token str
 	} else if len(tenant_email) == 0 && user_type == "email" {
 		i.sendEmailByManam(to, customerToken, emailBody, "")
 	} else if user_type == "mobile" {
-		smsBody := creatSMSBody(token)
+		smsBody := creatSMSBody(token, tenant_confirm_url)
 		i.sendSMSByManam(mobile, customerToken, smsBody)
 	}
 
@@ -599,14 +667,20 @@ func creatEmailBody(token string, tenant_confirm_url string) string {
 	} else {
 		htmlbody += token
 	}
+
+	htmlbody += "\n\n Email From Manam"
+
 	return htmlbody
 }
 
-func creatSMSBody(token string) string {
+func creatSMSBody(token string, tenant_confirm_url string) string {
 	// Please copy and paste the following link into your browser to confirm your account\n\nhttp://localhost:3000/auth/confirm?cnf=x5kaCnV_G-b43oXlm3OJ98QBhWuBvwpEFvJ6WJWBWq8ssj13wrHATssafmQl-sadRNmvfnFVH9PT-www8Od1bg%3D%3D&amp;customer_token=kiss_customerooooosdsd4
 	htmlbody := "Hi \n \n"
 	htmlbody += "Please copy and paste the following code in your site to confirm your account\n\n"
 	htmlbody += token
+	htmlbody += "\n Here is The address:"
+	htmlbody += tenant_confirm_url
+	htmlbody += "\n From Manam"
 	return htmlbody
 }
 

@@ -277,6 +277,7 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 
 	user_type := r.Header.Get("user_type")
 	fmt.Printf("----------user_type:%s-----------\n", user_type)
+	fmt.Printf("----------page:%s-----------\n", page)
 	method := r.URL.Path
 
 	if len(bb) == 0 {
@@ -308,7 +309,21 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 	confirms := h.Confirms[page]
 	whitelist := h.Whitelist[page]
 
+
+	fmt.Println(page)
+	fmt.Println(">>>>>>>>>>>>>>>>>.--------------------------<<<<<<<<<<<<<<<<<")
+
 	switch page {
+	case "SendNewEmailConfirm":
+		fmt.Println("-----------------------SendNewEmailConfirm case----------------------------------------")
+		var pid string
+		pid = values["email"]
+
+		return UserValues{
+                        HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},
+                        PID:               pid,
+                        Password:          "1234",
+                }, nil
 	case "confirm":
 		return ConfirmValues{
 			HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules},

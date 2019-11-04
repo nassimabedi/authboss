@@ -52,6 +52,14 @@ type RecoverStartValuer interface {
 	//end
 }
 
+//start
+type NewConfirmEmailValuer interface {
+	Validator
+	GetPID() string
+}
+
+//end
+
 // RecoverMiddleValuer provides the token that the user submitted
 // via their link.
 type RecoverMiddleValuer interface {
@@ -130,6 +138,17 @@ func MustHaveRecoverStartValues(v Validator) RecoverStartValuer {
 
 	panic(fmt.Sprintf("bodyreader returned a type that could not be upgraded to RecoverStartValuer: %T", v))
 }
+
+//start
+func MustHaveNewConfirmEmailValues(v Validator) NewConfirmEmailValuer {
+	if u, ok := v.(NewConfirmEmailValuer); ok {
+		return u
+	}
+
+	panic(fmt.Sprintf("bodyreader returned a type that could not be upgraded to NewConfirmEmailValuer: %T", v))
+}
+
+//end
 
 // MustHaveRecoverMiddleValues upgrades a validatable set of values
 // to ones specific to a user that's attempting to recover.
