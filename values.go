@@ -58,6 +58,11 @@ type NewConfirmEmailValuer interface {
 	GetPID() string
 }
 
+type NewConfirmSMSValuer interface {
+	Validator
+	GetMobile() string
+}
+
 //end
 
 // RecoverMiddleValuer provides the token that the user submitted
@@ -142,6 +147,14 @@ func MustHaveRecoverStartValues(v Validator) RecoverStartValuer {
 //start
 func MustHaveNewConfirmEmailValues(v Validator) NewConfirmEmailValuer {
 	if u, ok := v.(NewConfirmEmailValuer); ok {
+		return u
+	}
+
+	panic(fmt.Sprintf("bodyreader returned a type that could not be upgraded to NewConfirmEmailValuer: %T", v))
+}
+
+func MustHaveNewConfirmSMSValues(v Validator) NewConfirmSMSValuer {
+	if u, ok := v.(NewConfirmSMSValuer); ok {
 		return u
 	}
 

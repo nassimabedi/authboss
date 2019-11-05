@@ -59,6 +59,8 @@ func (i *ConfirmInterceptor) Init(ab *authboss.Authboss) (err error) {
 
 	i.origWriter.Config.Core.Router.Post("/send_confirm_email", i.origWriter.Core.ErrorHandler.Wrap(i.SendNewConfirmEmail))
 
+	i.origWriter.Config.Core.Router.Post("/send_confirm_sms", i.origWriter.Core.ErrorHandler.Wrap(i.SendNewConfirmSMS))
+
 	// callbackMethod("/confirm_sms", i.origWriter.Config.Core.ErrorHandler.Wrap(i.ConfirmSMS))
 
 	// i.origWriter.Events.Before(authboss.EventAuth, i.ConfirmCus.PreventAuth)
@@ -68,6 +70,66 @@ func (i *ConfirmInterceptor) Init(ab *authboss.Authboss) (err error) {
 	// end
 
 	return nil
+
+}
+
+func (i *ConfirmInterceptor) SendNewConfirmSMS(w http.ResponseWriter, req *http.Request) error {
+	fmt.Println("------------------override-------SendNewConfirmEmail-------------------------------------")
+	logger := i.origWriter.RequestLogger(req)
+	validatable, err := i.origWriter.Core.BodyReader.Read("SendNewSMSConfirm", req)
+	if err != nil {
+		return err
+	}
+	fmt.Println(validatable)
+	fmt.Println(validatable)
+	newConfirmVals := authboss.MustHaveNewConfirmSMSValues(validatable)
+	fmt.Println(newConfirmVals)
+	fmt.Println(newConfirmVals.GetMobile())
+
+	customerToken := req.Header.Get("X-Consumer-ID")
+	userType := "mobile"
+
+	user, err := i.origWriter.Storage.ServerCustom.Load(req.Context(), newConfirmVals.GetMobile(), customerToken, userType)
+
+	if err == authboss.ErrUserNotFound {
+		logger.Infof("user %s was attempted to be confirmed, user does not exist, faking successful response", newConfirmVals.GetMobile())
+		// ro := authboss.RedirectOptions{
+		// 	Code: http.StatusTemporaryRedirect,
+		// 	// RedirectPath: i.origWriter.Authboss.Config.Paths.RecoverOK,
+		// 	// Success: recoverInitiateSuccessFlash,
+		// 	// Success:      recoverInitiateSuccessFlash,
+
+		// }
+		// data := authboss.HTMLData{authboss.DataErr: "Invalid Credentials"}
+		data := authboss.HTMLData{
+			authboss.DataValidation: `{"msg":"User does not exist","statusCode":"404"}`,
+		}
+
+		return i.origWriter.Core.Responder.Respond(w, req, 404, "SendNewEmailConfirm", data)
+		// return i.origWriter.Core.Redirector.Redirect(w, req, ro)
+	}
+	fmt.Println(user)
+
+	cuser := authboss.MustBeConfirmable(user)
+	bb := req.Header.Get("X-Consumer-ID")
+
+	if err = i.StartConfirmation(req.Context(), cuser, true, bb, userType); err != nil {
+		return err
+	}
+
+	ro := authboss.RedirectOptions{
+		Code: http.StatusTemporaryRedirect,
+		// RedirectPath: c.Authboss.Config.Paths.ConfirmNotOK,
+		Success: "Please verify your account, an SMS has been sent to you.",
+	}
+
+	ro.Code = http.StatusTemporaryRedirect
+	ro.RedirectPath = i.origWriter.Config.Paths.ConfirmNotOK
+	ro.Success = "Please verify your account, an SMS has been sent to you."
+
+	// return i.origWriter.Config.Core.Responder.Respond(w, req, http.StatusOK, PageRegister, data)
+	return i.origWriter.Core.Redirector.Redirect(w, req, ro)
+	// return true, i.origWriter.Config.Core.Red
 
 }
 
@@ -85,20 +147,27 @@ func (i *ConfirmInterceptor) SendNewConfirmEmail(w http.ResponseWriter, req *htt
 	fmt.Println(newConfirmVals.GetPID())
 
 	customerToken := req.Header.Get("X-Consumer-ID")
-	userType := req.Header.Get("user_type")
+	userType := "email"
 
 	user, err := i.origWriter.Storage.ServerCustom.Load(req.Context(), newConfirmVals.GetPID(), customerToken, userType)
 
 	if err == authboss.ErrUserNotFound {
 		logger.Infof("user %s was attempted to be recovered, user does not exist, faking successful response", newConfirmVals.GetPID())
-		ro := authboss.RedirectOptions{
-			Code: http.StatusTemporaryRedirect,
-			// RedirectPath: i.origWriter.Authboss.Config.Paths.RecoverOK,
-			// Success: recoverInitiateSuccessFlash,
-			// Success:      recoverInitiateSuccessFlash,
+		// ro := authboss.RedirectOptions{
+		// 	Code: http.StatusTemporaryRedirect,
+		// 	// RedirectPath: i.origWriter.Authboss.Config.Paths.RecoverOK,
+		// 	// Success: recoverInitiateSuccessFlash,
+		// 	// Success:      recoverInitiateSuccessFlash,
 
+		// }
+		// data := authboss.HTMLData{authboss.DataErr: "Invalid Credentials"}
+		data := authboss.HTMLData{
+
+			authboss.DataValidation: `{"msg":"User does not exist","statusCode":"404"}`,
 		}
-		return i.origWriter.Core.Redirector.Redirect(w, req, ro)
+
+		return i.origWriter.Core.Responder.Respond(w, req, 404, "SendNewEmailConfirm", data)
+		// return i.origWriter.Core.Redirector.Redirect(w, req, ro)
 	}
 	fmt.Println(user)
 

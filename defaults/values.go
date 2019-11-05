@@ -59,6 +59,27 @@ func (u UserValues) GetCustomerToken() string {
 	return u.CustomerToken
 }
 
+type NewConfirmSMSValues struct {
+        HTTPFormValidator
+        Mobile string
+}
+
+func (c NewConfirmSMSValues) GetMobile() string {
+        return c.Mobile
+}
+
+type NewConfirmEmailValues struct {
+        HTTPFormValidator
+        PID string
+}
+
+func (c NewConfirmEmailValues) GetPID() string {
+        return c.PID
+}
+
+
+
+
 //end
 
 // GetValues from the form.
@@ -314,15 +335,23 @@ func (h HTTPBodyReader) Read(page string, r *http.Request) (authboss.Validator, 
 	fmt.Println(">>>>>>>>>>>>>>>>>.--------------------------<<<<<<<<<<<<<<<<<")
 
 	switch page {
+	 case "SendNewSMSConfirm":
+                fmt.Println("-----------------------SendNewSMSConfirm case----------------------------------------")
+                var mobile string
+                mobile = values["mobile"]
+
+                return NewConfirmSMSValues{
+                        HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},
+                        Mobile:               mobile,
+                }, nil
+
 	case "SendNewEmailConfirm":
 		fmt.Println("-----------------------SendNewEmailConfirm case----------------------------------------")
 		var pid string
 		pid = values["email"]
-
-		return UserValues{
+		return NewConfirmEmailValues{
                         HTTPFormValidator: HTTPFormValidator{Values: values, Ruleset: rules, ConfirmFields: confirms},
                         PID:               pid,
-                        Password:          "1234",
                 }, nil
 	case "confirm":
 		return ConfirmValues{
