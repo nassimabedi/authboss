@@ -70,7 +70,8 @@ func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 		if val, ok := preserve["email"]; !ok {
 			if len(val) == 0 {
 				w.WriteHeader(404)
-				w.Write([]byte(`Email is require`))
+				// w.Write([]byte(`Email is require`))
+				w.Write([]byte(`{errors:[{"msg":"Email is require","statusCode:404}]}"`))
 			}
 			fmt.Println(val)
 			fmt.Println(ok)
@@ -84,7 +85,7 @@ func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 			if len(val) == 0 {
 				fmt.Println("-----------------mobile not set----------------->>>>>>>>..................")
 				w.WriteHeader(404)
-				w.Write([]byte(`Mobile is require`))
+				w.Write([]byte(`{errors:[{"msg":"Mobile is require","statusCode:404}]}"`))
 			}
 			fmt.Println(val)
 			fmt.Println(ok)
@@ -167,7 +168,7 @@ func (i *Interceptor) Post(w http.ResponseWriter, req *http.Request) error {
 			// authboss.DataValidation: {"msg": authboss.ErrorMap(errs)},
 			// authboss.DataValidation: [{"msg1": "sssss"}]
 			// "sadsad": "{\"msg1\": \"sssss\"}",
-			authboss.DataValidation: `{"msg":"user already exists","statusCode":"406"}`,
+			authboss.DataValidation: `[{"msg":"user already exists","statusCode":"406"}]`,
 		}
 		fmt.Println("=============show data error=====================")
 		fmt.Println(data)
