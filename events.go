@@ -74,7 +74,6 @@ func (c *Events) Before(e Event, f EventHandler) {
 
 // After event, call f.
 func (c *Events) After(e Event, f EventHandler) {
-	fmt.Println("####################aaaaaaaaaaaaaaaaaaaaaa#######################")
 	events := c.after[e]
 	events = append(events, f)
 	c.after[e] = events
@@ -82,7 +81,6 @@ func (c *Events) After(e Event, f EventHandler) {
 
 //After even cus
 func (c *Events) AfterCuss(e Event, f EventHandlerCus) {
-	fmt.Println("####################aaaaaaaaaaaaaaaaaaaaaa#######################")
 	events := c.afterCus[e]
 	events = append(events, f)
 	c.afterCus[e] = events
